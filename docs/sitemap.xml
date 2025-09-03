@@ -3,10 +3,13 @@
   xmlns:xhtml="http://www.w3.org/1999/xhtml">
   <url>
     <loc>/</loc>
-    <lastmod>2024-01-03T00:00:00+00:00</lastmod>
+    <lastmod>2024-01-04T00:00:00+00:00</lastmod>
   </url><url>
     <loc>/posts/</loc>
-    <lastmod>2024-01-03T00:00:00+00:00</lastmod>
+    <lastmod>2024-01-04T00:00:00+00:00</lastmod>
+  </url><url>
+    <loc>/posts/trinitycore-335-engage-pathfindingnew/</loc>
+    <lastmod>2024-01-04T00:00:00+00:00</lastmod>
   </url><url>
     <loc>/posts/trinitycore-335-engage-pathfinding/</loc>
     <lastmod>2024-01-03T00:00:00+00:00</lastmod>
