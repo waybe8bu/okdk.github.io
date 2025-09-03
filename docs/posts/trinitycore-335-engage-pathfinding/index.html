@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en-us">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>TrinityCore 如何处理怪物 Engage 玩家：路径规划同步 | okie dokie</title>
+    <link rel="stylesheet" href="/css/style.css" />
+    <link rel="stylesheet" href="/css/fonts.css" />
+    
+  </head>
+
+  <body>
+    <nav>
+    <ul class="menu">
+      
+      <li><a href="/">Home</a></li>
+      
+      <li><a href="/posts">All posts</a></li>
+      
+    </ul>
+    <hr/>
+    </nav>
+
+<div class="article-meta">
+<h1><span class="title">TrinityCore 如何处理怪物 Engage 玩家：路径规划同步</span></h1>
+
+<h2 class="date">2024/01/03</h2>
+</div>
+
+<main>
+<p>怪物选择到合适的victim，完成了路径规划之后，是将路径信息发给客户端还是定时向附近玩家广播位置？</p>
+<p>我来帮你分析怪物在选择到victim并完成路径规划后，是如何向客户端同步位置信息的。让我搜索相关的代码。 现在让我查看Movement包的相关代码： 现在让我查看MoveSplineInit.cpp文件，这应该是发送移动包的关键代码： 现在让我看看<code>SendMessageToSet</code>函数： 现在让我查看MessageDistDeliverer的实现： 现在让我看看定时位置更新的机制： 让我查看Unit的UpdatePosition方法： 现在让我看看Map的CreatureRelocation方法： 现在让我看看Movement相关的MotionMaster如何工作： 现在让我查看Spline移动系统，这是怪物移动的核心： 让我看一下Unit类中位置同步相关的代码： 基于我的分析，现在我可以全面回答你的问题：</p>
+<h2 id="怪物移动同步机制分析">怪物移动同步机制分析</h2>
+<h3 id="答案发送路径信息给客户端">答案：发送路径信息给客户端</h3>
+<p>怪物在选择到合适的victim并完成路径规划后，<strong>主要是将完整的路径信息发送给客户端</strong>，而不是定时广播位置。</p>
+<h3 id="详细机制">详细机制</h3>
+<h4 id="1-路径规划完成后的处理">1. 路径规划完成后的处理</h4>
+<p><strong>文件</strong>: MoveSplineInit.cpp (第130行)</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-cpp" data-lang="cpp"><span style="display:flex;"><span>uint32 MoveSplineInit<span style="color:#f92672">::</span>Launch()
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// 验证参数并初始化移动样条
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    move_spline.Initialize(args);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// 创建SMSG_MONSTER_MOVE包
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    WorldPacket <span style="color:#a6e22e">data</span>(SMSG_MONSTER_MOVE, <span style="color:#ae81ff">64</span>);
+</span></span><span style="display:flex;"><span>    data <span style="color:#f92672">&lt;&lt;</span> unit<span style="color:#f92672">-&gt;</span>GetPackGUID();
+</span></span><span style="display:flex;"><span>    
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// 写入完整的移动路径信息
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    PacketBuilder<span style="color:#f92672">::</span>WriteMonsterMove(move_spline, data);
+</span></span><span style="display:flex;"><span>    
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// 向附近玩家广播路径包
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    unit<span style="color:#f92672">-&gt;</span>SendMessageToSet(<span style="color:#f92672">&amp;</span>data, true);
+</span></span><span style="display:flex;"><span>    
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> move_spline.Duration();
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><h4 id="2-路径包的内容">2. 路径包的内容</h4>
+<p>移动包包含以下信息：</p>
+<ul>
+<li><strong>起始位置</strong>: 怪物当前位置</li>
+<li><strong>路径点序列</strong>: 完整的移动路径waypoints</li>
+<li><strong>移动类型</strong>: 走路/跑步/飞行等</li>
+<li><strong>移动速度</strong>: 移动速度参数</li>
+<li><strong>面向信息</strong>: 面向目标、角度或位置</li>
+<li><strong>移动标志</strong>: 特殊移动状态</li>
+</ul>
+<h4 id="3-客户端预测机制">3. 客户端预测机制</h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-cpp" data-lang="cpp"><span style="display:flex;"><span><span style="color:#66d9ef">void</span> Unit<span style="color:#f92672">::</span>UpdateSplinePosition()
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// 服务器端根据样条曲线计算当前位置
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    Movement<span style="color:#f92672">::</span>Location loc <span style="color:#f92672">=</span> movespline<span style="color:#f92672">-&gt;</span>ComputePosition();
+</span></span><span style="display:flex;"><span>    
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// 更新服务器端位置
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    UpdatePosition(loc.x, loc.y, loc.z, loc.orientation);
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p><strong>工作原理</strong>:</p>
+<ol>
+<li><strong>一次性发送</strong>: 服务器将完整路径一次性发送给客户端</li>
+<li><strong>客户端插值</strong>: 客户端根据路径和时间进行平滑插值</li>
+<li><strong>服务器计算</strong>: 服务器同时进行相同的位置计算</li>
+<li><strong>同步检查</strong>: 定期验证客户端和服务器位置是否一致</li>
+</ol>
+<h4 id="4-位置同步机制">4. 位置同步机制</h4>
+<p><strong>定时同步的情况</strong>:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-cpp" data-lang="cpp"><span style="display:flex;"><span><span style="color:#66d9ef">void</span> WorldObject<span style="color:#f92672">::</span>SendMessageToSet(WorldPacket <span style="color:#66d9ef">const</span><span style="color:#f92672">*</span> data, <span style="color:#66d9ef">bool</span> self) <span style="color:#66d9ef">const</span>
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> (IsInWorld())
+</span></span><span style="display:flex;"><span>        SendMessageToSetInRange(data, GetVisibilityRange(), self);
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p><strong>同步时机</strong>:</p>
+<ul>
+<li><strong>立即同步</strong>: 开始新的移动时发送完整路径</li>
+<li><strong>定期校验</strong>: 移动过程中偶尔发送位置校正</li>
+<li><strong>状态变化</strong>: 停止、转向、速度变化时更新</li>
+<li><strong>异常处理</strong>: 检测到不同步时强制校正</li>
+</ul>
+<h3 id="优势分析">优势分析</h3>
+<h4 id="路径方式的优点">路径方式的优点:</h4>
+<ol>
+<li><strong>网络效率</strong>: 一次发送完整路径，减少网络包数量</li>
+<li><strong>流畅性</strong>: 客户端可以进行平滑插值，移动更流畅</li>
+<li><strong>预测性</strong>: 客户端可以预测移动轨迹</li>
+<li><strong>延迟容忍</strong>: 网络延迟不会影响移动流畅度</li>
+</ol>
+<h4 id="定时位置方式的缺点">定时位置方式的缺点:</h4>
+<ol>
+<li><strong>网络压力</strong>: 需要频繁发送位置包</li>
+<li><strong>不流畅</strong>: 移动可能出现跳跃感</li>
+<li><strong>延迟敏感</strong>: 网络延迟直接影响移动表现</li>
+</ol>
+<h3 id="特殊情况">特殊情况</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-cpp" data-lang="cpp"><span style="display:flex;"><span><span style="color:#66d9ef">void</span> MoveSplineInit<span style="color:#f92672">::</span>Stop()
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// 停止移动时发送停止包
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    WorldPacket <span style="color:#a6e22e">data</span>(SMSG_MONSTER_MOVE, <span style="color:#ae81ff">64</span>);
+</span></span><span style="display:flex;"><span>    PacketBuilder<span style="color:#f92672">::</span>WriteStopMovement(loc, args.splineId, data);
+</span></span><span style="display:flex;"><span>    unit<span style="color:#f92672">-&gt;</span>SendMessageToSet(<span style="color:#f92672">&amp;</span>data, true);
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p><strong>需要立即更新的情况</strong>:</p>
+<ul>
+<li>移动路径被打断</li>
+<li>目标发生变化</li>
+<li>遇到障碍物</li>
+<li>进入战斗状态</li>
+<li>施放法术需要停止</li>
+</ul>
+<h3 id="总结">总结</h3>
+<p>TrinityCore使用的是<strong>基于路径的移动同步机制</strong>，这是现代MMO游戏的标准做法。服务器在怪物开始移动时发送完整的移动路径信息，客户端根据这些信息进行本地插值计算，实现流畅的移动效果。只有在特殊情况下才会发送额外的位置校正包。</p>
+
+</main>
+
+  <footer>
+  
+  
+  </footer>
+  </body>
+</html>
+
