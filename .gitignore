@@ -1,0 +1,9 @@
+archetypes/
+assets/
+config.toml
+data/
+.hugo_build.lock
+layouts/
+resources/
+static/
+themes/
