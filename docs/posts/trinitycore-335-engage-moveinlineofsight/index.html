@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en-us">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>TrinityCore 如何处理怪物 Engage 玩家：CreatureAI::MoveInLineOfSight的调用链路 | okie dokie</title>
+    <link rel="stylesheet" href="/css/style.css" />
+    <link rel="stylesheet" href="/css/fonts.css" />
+    
+  </head>
+
+  <body>
+    <nav>
+    <ul class="menu">
+      
+      <li><a href="/">Home</a></li>
+      
+      <li><a href="/posts">All posts</a></li>
+      
+    </ul>
+    <hr/>
+    </nav>
+
+<div class="article-meta">
+<h1><span class="title">TrinityCore 如何处理怪物 Engage 玩家：CreatureAI::MoveInLineOfSight的调用链路</span></h1>
+
+<h2 class="date">2024/01/02</h2>
+</div>
+
+<main>
+<p>指出CreatureAI::MoveInLineOfSight的调用链路</p>
+<p>我来帮你分析<code>CreatureAI::MoveInLineOfSight</code>的调用链路。让我搜索相关的调用代码。 现在让我查看Grid通知机制，这是<code>MoveInLineOfSight</code>被调用的关键地方： 现在让我查看<code>CreatureUnitRelocationWorker</code>函数： 现在让我查看这些Grid通知器是在哪里被调用的： 让我查看这些通知器在哪里被触发： 现在让我搜索这些通知器是在什么时候被调用的： 现在让我查看具体的调用点，特别是Unit和Player中的调用： 现在让我查看Object类中的调用： 现在让我查看Map的Relocation方法： 让我查看Map的Update方法，那里应该有DelayedUnitRelocation的调用： 现在让我搜索哪里调用了Map的Update方法： 让我查看World或者MapManager中Map的Update调用： 现在让我查看MapManager的Update方法： 现在让我查看World类中哪里调用了MapManager的Update： 现在让我搜索World的Update在哪里被调用： 现在让我找一下具体的强制重新定位调用，比如SetPosition等函数调用： 基于我的分析，现在我可以给你完整的<code>CreatureAI::MoveInLineOfSight</code>调用链路：</p>
+<h2 id="creatureaimoveinlineofsight-调用链路分析">CreatureAI::MoveInLineOfSight 调用链路分析</h2>
+<h3 id="完整调用链路">完整调用链路</h3>
+<pre tabindex="0"><code>1. WorldServer 主循环
+   ↓
+2. World::Update(diff)
+   ↓
+3. MapManager::Update(diff)
+   ↓
+4. Map::Update(diff) [对每个地图]
+   ↓
+5. DelayedUnitRelocation 通知器处理
+   ↓
+6. PlayerRelocationNotifier/CreatureRelocationNotifier::Visit()
+   ↓
+7. CreatureUnitRelocationWorker(Creature* c, Unit* u)
+   ↓
+8. CreatureAI::MoveInLineOfSight_Safe(Unit* who)
+   ↓
+9. CreatureAI::MoveInLineOfSight(Unit* who)
+</code></pre><h3 id="详细分析">详细分析</h3>
+<h4 id="1-主要触发路径">1. 主要触发路径</h4>
+<p><strong>路径A: 定期地图更新</strong></p>
+<ul>
+<li><strong>文件</strong>: Main.cpp (第531行)</li>
+</ul>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-cpp" data-lang="cpp"><span style="display:flex;"><span><span style="color:#66d9ef">void</span> <span style="color:#a6e22e">WorldUpdateLoop</span>()
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// ...
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    sWorld<span style="color:#f92672">-&gt;</span>Update(diff);  <span style="color:#75715e">// 每次世界更新循环
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>}
+</span></span></code></pre></div><p><strong>路径B: 单位强制更新可见性</strong></p>
+<ul>
+<li><strong>文件</strong>: Unit.cpp (第12221行)</li>
+</ul>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-cpp" data-lang="cpp"><span style="display:flex;"><span><span style="color:#66d9ef">void</span> Unit<span style="color:#f92672">::</span>UpdateObjectVisibility(<span style="color:#66d9ef">bool</span> forced)
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// ...
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">if</span> (forced)
+</span></span><span style="display:flex;"><span>    {
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e">// call MoveInLineOfSight for nearby creatures
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        Trinity<span style="color:#f92672">::</span>AIRelocationNotifier notifier(<span style="color:#f92672">*</span><span style="color:#66d9ef">this</span>);
+</span></span><span style="display:flex;"><span>        Cell<span style="color:#f92672">::</span>VisitAllObjects(<span style="color:#66d9ef">this</span>, notifier, GetVisibilityRange());
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p><strong>路径C: 玩家进入PvP状态</strong></p>
+<ul>
+<li><strong>文件</strong>: Player.cpp (第20381行)</li>
+</ul>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-cpp" data-lang="cpp"><span style="display:flex;"><span><span style="color:#66d9ef">void</span> Player<span style="color:#f92672">::</span>UpdatePvPState()
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// ...
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#75715e">// call MoveInLineOfSight for nearby contested guards
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    Trinity<span style="color:#f92672">::</span>AIRelocationNotifier notifier(<span style="color:#f92672">*</span><span style="color:#66d9ef">this</span>);
+</span></span><span style="display:flex;"><span>    Cell<span style="color:#f92672">::</span>VisitWorldObjects(<span style="color:#66d9ef">this</span>, notifier, GetVisibilityRange());
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p><strong>路径D: 生物召唤时</strong></p>
+<ul>
+<li><strong>文件</strong>: Object.cpp (第1946行)</li>
+</ul>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-cpp" data-lang="cpp"><span style="display:flex;"><span>TempSummon<span style="color:#f92672">*</span> Map<span style="color:#f92672">::</span>SummonCreature(...)
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// ...
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#75715e">// call MoveInLineOfSight for nearby creatures
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    Trinity<span style="color:#f92672">::</span>AIRelocationNotifier notifier(<span style="color:#f92672">*</span>summon);
+</span></span><span style="display:flex;"><span>    Cell<span style="color:#f92672">::</span>VisitAllObjects(summon, notifier, GetVisibilityRange());
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><h4 id="2-核心处理函数">2. 核心处理函数</h4>
+<p><strong>GridNotifiers.cpp</strong> (第128行)</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-cpp" data-lang="cpp"><span style="display:flex;"><span><span style="color:#66d9ef">inline</span> <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">CreatureUnitRelocationWorker</span>(Creature<span style="color:#f92672">*</span> c, Unit<span style="color:#f92672">*</span> u)
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> (<span style="color:#f92672">!</span>u<span style="color:#f92672">-&gt;</span>IsAlive() <span style="color:#f92672">||</span> <span style="color:#f92672">!</span>c<span style="color:#f92672">-&gt;</span>IsAlive() <span style="color:#f92672">||</span> c <span style="color:#f92672">==</span> u <span style="color:#f92672">||</span> u<span style="color:#f92672">-&gt;</span>IsInFlight())
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">return</span>;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> (<span style="color:#f92672">!</span>c<span style="color:#f92672">-&gt;</span>HasUnitState(UNIT_STATE_SIGHTLESS))
+</span></span><span style="display:flex;"><span>    {
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> (c<span style="color:#f92672">-&gt;</span>IsAIEnabled() <span style="color:#f92672">&amp;&amp;</span> c<span style="color:#f92672">-&gt;</span>CanSeeOrDetect(u, false, true))
+</span></span><span style="display:flex;"><span>            c<span style="color:#f92672">-&gt;</span>AI()<span style="color:#f92672">-&gt;</span>MoveInLineOfSight_Safe(u);  <span style="color:#75715e">// 调用安全版本
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        <span style="color:#66d9ef">else</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">if</span> (u<span style="color:#f92672">-&gt;</span>GetTypeId() <span style="color:#f92672">==</span> TYPEID_PLAYER <span style="color:#f92672">&amp;&amp;</span> u<span style="color:#f92672">-&gt;</span>HasStealthAura() <span style="color:#f92672">&amp;&amp;</span> c<span style="color:#f92672">-&gt;</span>IsAIEnabled() <span style="color:#f92672">&amp;&amp;</span> c<span style="color:#f92672">-&gt;</span>CanSeeOrDetect(u, false, true, true))
+</span></span><span style="display:flex;"><span>                c<span style="color:#f92672">-&gt;</span>AI()<span style="color:#f92672">-&gt;</span>TriggerAlert(u);
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><h4 id="3-安全包装函数">3. 安全包装函数</h4>
+<p><strong>CreatureAI.cpp</strong> (第108行)</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-cpp" data-lang="cpp"><span style="display:flex;"><span><span style="color:#66d9ef">void</span> CreatureAI<span style="color:#f92672">::</span>MoveInLineOfSight_Safe(Unit<span style="color:#f92672">*</span> who)
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> (_moveInLOSLocked <span style="color:#f92672">==</span> true)  <span style="color:#75715e">// 防止递归调用
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        <span style="color:#66d9ef">return</span>;
+</span></span><span style="display:flex;"><span>    _moveInLOSLocked <span style="color:#f92672">=</span> true;
+</span></span><span style="display:flex;"><span>    MoveInLineOfSight(who);  <span style="color:#75715e">// 调用实际的处理函数
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    _moveInLOSLocked <span style="color:#f92672">=</span> false;
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><h4 id="4-实际处理函数">4. 实际处理函数</h4>
+<p><strong>CreatureAI.cpp</strong> (第117行)</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-cpp" data-lang="cpp"><span style="display:flex;"><span><span style="color:#66d9ef">void</span> CreatureAI<span style="color:#f92672">::</span>MoveInLineOfSight(Unit<span style="color:#f92672">*</span> who)
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> (me<span style="color:#f92672">-&gt;</span>IsEngaged())  <span style="color:#75715e">// 已经在战斗中则不处理
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        <span style="color:#66d9ef">return</span>;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> (me<span style="color:#f92672">-&gt;</span>HasReactState(REACT_AGGRESSIVE) <span style="color:#f92672">&amp;&amp;</span> me<span style="color:#f92672">-&gt;</span>CanStartAttack(who, false))
+</span></span><span style="display:flex;"><span>        me<span style="color:#f92672">-&gt;</span>EngageWithTarget(who);  <span style="color:#75715e">// 开始攻击目标
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>}
+</span></span></code></pre></div><h3 id="调用频率和时机">调用频率和时机</h3>
+<ol>
+<li><strong>定期调用</strong>: 每次地图更新循环中，处理需要重新定位的单位</li>
+<li><strong>强制调用</strong>: 当单位位置发生重大变化时立即触发</li>
+<li><strong>特殊事件</strong>: PvP状态变化、生物召唤等特殊情况</li>
+</ol>
+<h3 id="性能优化措施">性能优化措施</h3>
+<ol>
+<li><strong>安全锁</strong>: <code>_moveInLOSLocked</code> 防止递归调用造成栈溢出</li>
+<li><strong>条件检查</strong>: 在<code>CreatureUnitRelocationWorker</code>中进行多重条件检查，避免不必要的AI调用</li>
+<li><strong>延迟处理</strong>: 使用<code>DelayedUnitRelocation</code>将重定位处理延迟到适当时机</li>
+</ol>
+<p>这个调用链路确保了怪物能够及时感知到附近玩家的存在，并根据其AI设置做出相应的反应（攻击、警戒等）。</p>
+
+</main>
+
+  <footer>
+  
+  
+  </footer>
+  </body>
+</html>
+
