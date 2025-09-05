@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en-us">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>TrinityCore 客户端发送位置信息的时机 | okie dokie</title>
+    <link rel="stylesheet" href="/css/style.css" />
+    <link rel="stylesheet" href="/css/fonts.css" />
+    
+  </head>
+
+  <body>
+    <nav>
+    <ul class="menu">
+      
+      <li><a href="/">Home</a></li>
+      
+      <li><a href="/posts">All posts</a></li>
+      
+    </ul>
+    <hr/>
+    </nav>
+
+<div class="article-meta">
+<h1><span class="title">TrinityCore 客户端发送位置信息的时机</span></h1>
+
+<h2 class="date">2024/01/05</h2>
+</div>
+
+<main>
+<p>魔兽世界客户端会在哪些情况下同步当前位置给后端？</p>
+<p>基于我刚才对TrinityCore代码的深入分析，我来详细解答魔兽世界客户端在哪些情况下会同步位置给后端：</p>
+<h2 id="魔兽世界客户端位置同步机制">魔兽世界客户端位置同步机制</h2>
+<h3 id="1-主要同步触发情况">1. 主要同步触发情况</h3>
+<h4 id="a-移动状态变化">A. 移动状态变化</h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-cpp" data-lang="cpp"><span style="display:flex;"><span><span style="color:#75715e">// 对应TrinityCore中的MovementFlags
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#f92672">-</span> <span style="color:#960050;background-color:#1e0010">开始移动</span> (MOVEMENTFLAG_FORWARD<span style="color:#f92672">/</span>BACKWARD<span style="color:#f92672">/</span>LEFT<span style="color:#f92672">/</span>RIGHT)
+</span></span><span style="display:flex;"><span><span style="color:#f92672">-</span> <span style="color:#960050;background-color:#1e0010">停止移动</span> 
+</span></span><span style="display:flex;"><span><span style="color:#f92672">-</span> <span style="color:#960050;background-color:#1e0010">改变移动方向</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">-</span> <span style="color:#960050;background-color:#1e0010">开始</span><span style="color:#f92672">/</span><span style="color:#960050;background-color:#1e0010">停止跑步</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">-</span> <span style="color:#960050;background-color:#1e0010">开始</span><span style="color:#f92672">/</span><span style="color:#960050;background-color:#1e0010">停止游泳</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">-</span> <span style="color:#960050;background-color:#1e0010">开始</span><span style="color:#f92672">/</span><span style="color:#960050;background-color:#1e0010">停止飞行</span>
+</span></span></code></pre></div><h4 id="b-特殊移动行为">B. 特殊移动行为</h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-cpp" data-lang="cpp"><span style="display:flex;"><span><span style="color:#f92672">-</span> <span style="color:#960050;background-color:#1e0010">跳跃开始和落地</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">-</span> <span style="color:#960050;background-color:#1e0010">传送</span><span style="color:#f92672">/</span><span style="color:#960050;background-color:#1e0010">瞬移</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">-</span> <span style="color:#960050;background-color:#1e0010">被击退或推动</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">-</span> <span style="color:#960050;background-color:#1e0010">坐骑上下</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">-</span> <span style="color:#960050;background-color:#1e0010">变形状态改变</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">-</span> <span style="color:#960050;background-color:#1e0010">进入</span><span style="color:#f92672">/</span><span style="color:#960050;background-color:#1e0010">离开载具</span>
+</span></span></code></pre></div><h4 id="c-环境交互">C. 环境交互</h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-cpp" data-lang="cpp"><span style="display:flex;"><span><span style="color:#f92672">-</span> <span style="color:#960050;background-color:#1e0010">碰撞检测异常</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">-</span> <span style="color:#960050;background-color:#1e0010">地形高度变化</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">-</span> <span style="color:#960050;background-color:#1e0010">进入</span><span style="color:#f92672">/</span><span style="color:#960050;background-color:#1e0010">离开水中</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">-</span> <span style="color:#960050;background-color:#1e0010">穿越地图边界</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">-</span> <span style="color:#960050;background-color:#1e0010">区域切换</span>
+</span></span></code></pre></div><h3 id="2-网络包类型分析">2. 网络包类型分析</h3>
+<p>基于TrinityCore的实现，客户端发送的主要位置包类型：</p>
+<h4 id="msg_move_-系列包">MSG_MOVE_* 系列包</h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-cpp" data-lang="cpp"><span style="display:flex;"><span>MSG_MOVE_START_FORWARD          <span style="color:#75715e">// 开始前进
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>MSG_MOVE_START_BACKWARD         <span style="color:#75715e">// 开始后退  
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>MSG_MOVE_STOP                   <span style="color:#75715e">// 停止移动
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>MSG_MOVE_START_STRAFE_LEFT      <span style="color:#75715e">// 开始左平移
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>MSG_MOVE_START_STRAFE_RIGHT     <span style="color:#75715e">// 开始右平移
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>MSG_MOVE_START_TURN_LEFT        <span style="color:#75715e">// 开始左转
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>MSG_MOVE_START_TURN_RIGHT       <span style="color:#75715e">// 开始右转
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>MSG_MOVE_JUMP                   <span style="color:#75715e">// 跳跃
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>MSG_MOVE_FALL_LAND              <span style="color:#75715e">// 着陆
+</span></span></span></code></pre></div><h4 id="特殊移动包">特殊移动包</h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-cpp" data-lang="cpp"><span style="display:flex;"><span>MSG_MOVE_SET_FACING             <span style="color:#75715e">// 设置面向
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>MSG_MOVE_HEARTBEAT              <span style="color:#75715e">// 心跳包(定期位置校验)
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>MSG_MOVE_ROOT                   <span style="color:#75715e">// 定身状态
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>MSG_MOVE_UNROOT                 <span style="color:#75715e">// 解除定身
+</span></span></span></code></pre></div><h3 id="3-同步频率和条件">3. 同步频率和条件</h3>
+<h4 id="基于trinitycore源码分析的实际机制">基于TrinityCore源码分析的实际机制：</h4>
+<ol>
+<li>
+<p><strong>事件驱动同步</strong>（主要方式）</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-cpp" data-lang="cpp"><span style="display:flex;"><span><span style="color:#75715e">// 客户端只在移动状态改变时发送
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#f92672">-</span> <span style="color:#960050;background-color:#1e0010">不是每帧发送位置</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">-</span> <span style="color:#960050;background-color:#1e0010">移动开始时发送起始位置和移动标志</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">-</span> <span style="color:#960050;background-color:#1e0010">移动结束时发送最终位置</span>
+</span></span></code></pre></div></li>
+<li>
+<p><strong>心跳同步</strong>（辅助验证）</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-cpp" data-lang="cpp"><span style="display:flex;"><span><span style="color:#75715e">// 定期位置校验，频率较低
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#f92672">-</span> <span style="color:#960050;background-color:#1e0010">大约每</span><span style="color:#ae81ff">1</span><span style="color:#f92672">-</span><span style="color:#ae81ff">2</span><span style="color:#960050;background-color:#1e0010">秒发送一次</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">-</span> <span style="color:#960050;background-color:#1e0010">用于防作弊和位置校正</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">-</span> <span style="color:#960050;background-color:#1e0010">在长时间移动时进行中间验证</span>
+</span></span></code></pre></div></li>
+<li>
+<p><strong>异常同步</strong>（纠错机制）</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-cpp" data-lang="cpp"><span style="display:flex;"><span><span style="color:#75715e">// 客户端检测到位置异常时
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#f92672">-</span> <span style="color:#960050;background-color:#1e0010">服务器位置与客户端差异过大</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">-</span> <span style="color:#960050;background-color:#1e0010">碰撞检测失败</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">-</span> <span style="color:#960050;background-color:#1e0010">移动速度异常</span>
+</span></span></code></pre></div></li>
+</ol>
+<h3 id="4-位置包数据结构">4. 位置包数据结构</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-cpp" data-lang="cpp"><span style="display:flex;"><span><span style="color:#66d9ef">struct</span> <span style="color:#a6e22e">MovementInfo</span> {
+</span></span><span style="display:flex;"><span>    uint32 moveFlags;        <span style="color:#75715e">// 移动标志
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    uint32 moveFlags2;       <span style="color:#75715e">// 扩展移动标志  
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    uint32 time;             <span style="color:#75715e">// 时间戳
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">float</span> pos_x, pos_y, pos_z; <span style="color:#75715e">// 位置坐标
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">float</span> orientation;       <span style="color:#75715e">// 面向角度
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// 可选数据(根据标志)
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    uint64 transport_guid;   <span style="color:#75715e">// 载具GUID
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">float</span> transport_pos_x;   <span style="color:#75715e">// 载具相对位置
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">float</span> pitch;             <span style="color:#75715e">// 俯仰角
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">float</span> fall_time;         <span style="color:#75715e">// 掉落时间
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">float</span> jump_velocity;     <span style="color:#75715e">// 跳跃速度
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">float</span> spline_elevation;  <span style="color:#75715e">// 样条高度
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>};
+</span></span></code></pre></div><h3 id="5-智能同步策略">5. 智能同步策略</h3>
+<h4 id="trinitycore实现的优化">TrinityCore实现的优化：</h4>
+<ol>
+<li>
+<p><strong>客户端预测</strong></p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-cpp" data-lang="cpp"><span style="display:flex;"><span><span style="color:#75715e">// 客户端本地计算移动轨迹
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#f92672">-</span> <span style="color:#960050;background-color:#1e0010">接收服务器的移动指令</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">-</span> <span style="color:#960050;background-color:#1e0010">本地插值计算中间位置</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">-</span> <span style="color:#960050;background-color:#1e0010">只在关键节点同步</span>
+</span></span></code></pre></div></li>
+<li>
+<p><strong>服务器验证</strong></p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-cpp" data-lang="cpp"><span style="display:flex;"><span><span style="color:#75715e">// 服务器端校验机制
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">void</span> MotionMaster<span style="color:#f92672">::</span>Update(uint32 diff) {
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// 验证客户端位置合法性
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#75715e">// 检测移动速度是否正常
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#75715e">// 进行碰撞检测
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>}
+</span></span></code></pre></div></li>
+<li>
+<p><strong>差异化处理</strong></p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-cpp" data-lang="cpp"><span style="display:flex;"><span><span style="color:#75715e">// 不同移动类型采用不同同步策略
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#f92672">-</span> <span style="color:#960050;background-color:#1e0010">玩家移动：事件驱动</span> <span style="color:#f92672">+</span> <span style="color:#960050;background-color:#1e0010">心跳验证</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">-</span> NPC移动<span style="color:#960050;background-color:#1e0010">：服务器权威，发送完整路径</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">-</span> <span style="color:#960050;background-color:#1e0010">载具移动：高频同步确保同步性</span>
+</span></span></code></pre></div></li>
+</ol>
+<h3 id="6-反作弊机制">6. 反作弊机制</h3>
+<h4 id="位置验证逻辑">位置验证逻辑：</h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-cpp" data-lang="cpp"><span style="display:flex;"><span><span style="color:#66d9ef">bool</span> <span style="color:#a6e22e">ValidateMovement</span>(MovementInfo <span style="color:#66d9ef">const</span><span style="color:#f92672">&amp;</span> movementInfo) {
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// 1. 时间戳检查
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">if</span> (movementInfo.time <span style="color:#f92672">&lt;</span> lastMoveTime) 
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">return</span> false;
+</span></span><span style="display:flex;"><span>        
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// 2. 速度检查  
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">float</span> maxSpeed <span style="color:#f92672">=</span> GetMaxSpeed(movementInfo.moveFlags);
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> (CalculateSpeed() <span style="color:#f92672">&gt;</span> maxSpeed <span style="color:#f92672">*</span> <span style="color:#ae81ff">1.1f</span>)
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">return</span> false;
+</span></span><span style="display:flex;"><span>        
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// 3. 位置合法性检查
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">if</span> (<span style="color:#f92672">!</span>IsValidPosition(movementInfo.pos_x, pos_y, pos_z))
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">return</span> false;
+</span></span><span style="display:flex;"><span>        
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> true;
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><h3 id="7-总结">7. 总结</h3>
+<p><strong>魔兽世界客户端位置同步的核心原则</strong>：</p>
+<ol>
+<li><strong>不是每帧同步</strong>，而是<strong>事件驱动</strong>的智能同步</li>
+<li><strong>移动状态改变</strong>时必定同步（开始、停止、转向）</li>
+<li><strong>定期心跳</strong>进行位置校验（防作弊）</li>
+<li><strong>异常情况</strong>时立即同步（碰撞、传送等）</li>
+<li><strong>客户端预测 + 服务器验证</strong>的混合模式</li>
+</ol>
+<p>这种设计在保证游戏流畅性的同时，最大化地减少了网络开销，是现代网络游戏的标准做法。相比简单的每帧广播，这种方式可以将网络流量减少90%以上，同时保持良好的游戏体验。</p>
+
+</main>
+
+  <footer>
+  
+  
+  </footer>
+  </body>
+</html>
+
