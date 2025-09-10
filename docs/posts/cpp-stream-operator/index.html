@@ -28,7 +28,6 @@
 </div>
 
 <main>
-<p><a href="https://www.reddit.com/r/cpp/comments/xbn04o/why_does_c_use_the_insertion_and_extraction/?tl=zh-hans">https://www.reddit.com/r/cpp/comments/xbn04o/why_does_c_use_the_insertion_and_extraction/?tl=zh-hans</a></p>
 <p>为什么c++在打印字符串时使用插入运算符&laquo;，而不是像c一样通过某个方法比如print实现，是历史遗留问题还是出于某种考虑？</p>
 <p>这是一个非常好的问题！C++使用插入运算符<code>&lt;&lt;</code>而不是类似C的<code>printf</code>函数，这确实有深层的设计考虑，并非简单的历史遗留问题。让我详细解释：</p>
 <h2 id="-设计哲学差异">🎯 设计哲学差异</h2>
@@ -175,6 +174,18 @@
 <li><strong>语义清晰</strong>：视觉上表达数据流向</li>
 </ol>
 <p>这不是历史遗留问题，而是经过深思熟虑的设计决策，体现了C++作为&quot;更好的C&quot;和面向对象语言的设计哲学。现代C++（C++20/23）中引入<code>std::format</code>和<code>std::print</code>，说明语言在不断演进，但<code>&lt;&lt;</code>运算符仍然是C++输出的核心方式。</p>
+<hr>
+<p>AI 回答的有点 &ldquo;客气&rdquo;，reddit 这个应该是个人认为的最好回答：</p>
+<blockquote>
+<p>说实话，这只是为了确保类型安全的一个小技巧。仅此而已。他们也可以这样设计：</p>
+<pre tabindex="0"><code>cout.write(&#34;我的名字是 &#34;).write(name).write(&#34; 并且我今年 &#34;).write(age).write(&#34; 岁。\n&#34;);
+</code></pre><p>但那样的话，就更难扩展到自定义类型了，所以他们（滥用）了运算符重载机制：</p>
+<pre tabindex="0"><code>cout &lt;&lt; &#34;我的名字是 &#34; &lt;&lt; name &lt;&lt; &#34; 并且我今年 &#34; &lt;&lt; age &lt;&lt; &#34; 岁。\n&#34;;
+</code></pre><p>别钻牛角尖了；这没啥意义。 接受这个怪癖吧，这就是我们在 C++ 中进行 IO 的方式。</p></blockquote>
+<blockquote>
+<p>为什么在写的情况下扩展会更难？</p></blockquote>
+<blockquote>
+<p>因为那样的话，你需要为你的自定义类型在 std::ostream里添加一个成员函数重载，而你做不到。</p></blockquote>
 
 </main>
 
