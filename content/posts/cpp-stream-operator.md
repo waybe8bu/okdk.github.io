@@ -2,6 +2,8 @@
 title = '为什么 C++ 使用插入和提取运算符而不是函数？'
 date = 2024-01-08T00:00:00+00:00
 +++
+https://www.reddit.com/r/cpp/comments/xbn04o/why_does_c_use_the_insertion_and_extraction/?tl=zh-hans
+
 为什么c++在打印字符串时使用插入运算符<<，而不是像c一样通过某个方法比如print实现，是历史遗留问题还是出于某种考虑？
 
 这是一个非常好的问题！C++使用插入运算符`<<`而不是类似C的`printf`函数，这确实有深层的设计考虑，并非简单的历史遗留问题。让我详细解释：
