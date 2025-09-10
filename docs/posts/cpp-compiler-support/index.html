@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en-us">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>c&#43;&#43;各个标准版本的头文件 | okie dokie</title>
+    <link rel="stylesheet" href="/css/style.css" />
+    <link rel="stylesheet" href="/css/fonts.css" />
+    
+  </head>
+
+  <body>
+    <nav>
+    <ul class="menu">
+      
+      <li><a href="/">Home</a></li>
+      
+      <li><a href="/posts">All posts</a></li>
+      
+    </ul>
+    <hr/>
+    </nav>
+
+<div class="article-meta">
+<h1><span class="title">c++各个标准版本的头文件</span></h1>
+
+<h2 class="date">2024/01/07</h2>
+</div>
+
+<main>
+<h1 id="c编译器支持情况详细对比">C++编译器支持情况详细对比</h1>
+<h2 id="主要编译器概览">主要编译器概览</h2>
+<h3 id="1-gcc-gnu-compiler-collection">1. GCC (GNU Compiler Collection)</h3>
+<ul>
+<li><strong>开源免费</strong></li>
+<li><strong>跨平台支持</strong>：Linux、Windows (MinGW)、macOS</li>
+<li><strong>标准支持积极</strong></li>
+<li><strong>性能优秀</strong></li>
+</ul>
+<h3 id="2-clangllvm">2. Clang/LLVM</h3>
+<ul>
+<li><strong>现代架构</strong></li>
+<li><strong>优秀的错误信息</strong></li>
+<li><strong>苹果主推</strong>：macOS 默认编译器</li>
+<li><strong>模块化设计</strong></li>
+</ul>
+<h3 id="3-msvc-microsoft-visual-c">3. MSVC (Microsoft Visual C++)</h3>
+<ul>
+<li><strong>Windows 原生</strong></li>
+<li><strong>Visual Studio 集成</strong></li>
+<li><strong>微软扩展丰富</strong></li>
+<li><strong>调试工具强大</strong></li>
+</ul>
+<h3 id="4-intel-c-compiler-iccicx">4. Intel C++ Compiler (ICC/ICX)</h3>
+<ul>
+<li><strong>高性能优化</strong></li>
+<li><strong>Intel 硬件优化</strong></li>
+<li><strong>商业编译器</strong></li>
+</ul>
+<h2 id="c9803-支持情况">C++98/03 支持情况</h2>
+<h3 id="完全支持-所有现代编译器">完全支持 (所有现代编译器)</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-cpp" data-lang="cpp"><span style="display:flex;"><span><span style="color:#75715e">// 所有编译器都完全支持C++98/03
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>GCC <span style="color:#ae81ff">3.0</span><span style="color:#f92672">+</span>    <span style="color:#960050;background-color:#1e0010">✅</span> <span style="color:#960050;background-color:#1e0010">完全支持</span>
+</span></span><span style="display:flex;"><span>Clang <span style="color:#ae81ff">1.0</span><span style="color:#f92672">+</span>  <span style="color:#960050;background-color:#1e0010">✅</span> <span style="color:#960050;background-color:#1e0010">完全支持</span>  
+</span></span><span style="display:flex;"><span>MSVC <span style="color:#ae81ff">6.0</span><span style="color:#f92672">+</span>   <span style="color:#960050;background-color:#1e0010">✅</span> <span style="color:#960050;background-color:#1e0010">完全支持</span>
+</span></span><span style="display:flex;"><span>ICC <span style="color:#ae81ff">7.0</span><span style="color:#f92672">+</span>    <span style="color:#960050;background-color:#1e0010">✅</span> <span style="color:#960050;background-color:#1e0010">完全支持</span>
+</span></span></code></pre></div><h2 id="c11-支持情况">C++11 支持情况</h2>
+<h3 id="gcc">GCC</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-cpp" data-lang="cpp"><span style="display:flex;"><span>GCC <span style="color:#ae81ff">4.3</span>  (<span style="color:#ae81ff">2008</span>) <span style="color:#f92672">-</span> <span style="color:#960050;background-color:#1e0010">部分支持</span> (<span style="color:#66d9ef">auto</span>, <span style="color:#66d9ef">decltype</span>, <span style="color:#66d9ef">static_assert</span>)
+</span></span><span style="display:flex;"><span>GCC <span style="color:#ae81ff">4.4</span>  (<span style="color:#ae81ff">2009</span>) <span style="color:#f92672">-</span> <span style="color:#960050;background-color:#1e0010">初始化列表</span>, <span style="color:#960050;background-color:#1e0010">变参模板</span>
+</span></span><span style="display:flex;"><span>GCC <span style="color:#ae81ff">4.5</span>  (<span style="color:#ae81ff">2010</span>) <span style="color:#f92672">-</span> Lambda表达式
+</span></span><span style="display:flex;"><span>GCC <span style="color:#ae81ff">4.6</span>  (<span style="color:#ae81ff">2011</span>) <span style="color:#f92672">-</span> <span style="color:#960050;background-color:#1e0010">范围</span><span style="color:#66d9ef">for</span>, <span style="color:#66d9ef">nullptr</span>, <span style="color:#66d9ef">constexpr</span>
+</span></span><span style="display:flex;"><span>GCC <span style="color:#ae81ff">4.7</span>  (<span style="color:#ae81ff">2012</span>) <span style="color:#f92672">-</span> <span style="color:#960050;background-color:#1e0010">委托构造函数</span>, <span style="color:#66d9ef">override</span><span style="color:#f92672">/</span><span style="color:#66d9ef">final</span>
+</span></span><span style="display:flex;"><span>GCC <span style="color:#ae81ff">4.8</span>  (<span style="color:#ae81ff">2013</span>) <span style="color:#f92672">-</span> <span style="color:#960050;background-color:#1e0010">线程局部存储</span>
+</span></span><span style="display:flex;"><span>GCC <span style="color:#ae81ff">4.9</span>  (<span style="color:#ae81ff">2014</span>) <span style="color:#f92672">-</span> <span style="color:#960050;background-color:#1e0010">正则表达式完整支持</span>
+</span></span><span style="display:flex;"><span>GCC <span style="color:#ae81ff">5.0</span>  (<span style="color:#ae81ff">2015</span>) <span style="color:#f92672">-</span> <span style="color:#960050;background-color:#1e0010">✅</span> C<span style="color:#f92672">++</span><span style="color:#ae81ff">11</span> <span style="color:#960050;background-color:#1e0010">完全支持</span>
+</span></span></code></pre></div><h3 id="clang">Clang</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-cpp" data-lang="cpp"><span style="display:flex;"><span>Clang <span style="color:#ae81ff">2.9</span>  (<span style="color:#ae81ff">2011</span>) <span style="color:#f92672">-</span> <span style="color:#960050;background-color:#1e0010">部分支持</span>
+</span></span><span style="display:flex;"><span>Clang <span style="color:#ae81ff">3.0</span>  (<span style="color:#ae81ff">2011</span>) <span style="color:#f92672">-</span> <span style="color:#960050;background-color:#1e0010">大部分</span>C<span style="color:#f92672">++</span><span style="color:#ae81ff">11</span><span style="color:#960050;background-color:#1e0010">特性</span>
+</span></span><span style="display:flex;"><span>Clang <span style="color:#ae81ff">3.1</span>  (<span style="color:#ae81ff">2012</span>) <span style="color:#f92672">-</span> <span style="color:#960050;background-color:#1e0010">✅</span> C<span style="color:#f92672">++</span><span style="color:#ae81ff">11</span> <span style="color:#960050;background-color:#1e0010">完全支持</span>
+</span></span><span style="display:flex;"><span>Clang <span style="color:#ae81ff">3.3</span><span style="color:#f92672">+</span> (<span style="color:#ae81ff">2013</span>) <span style="color:#f92672">-</span> <span style="color:#960050;background-color:#1e0010">稳定的</span>C<span style="color:#f92672">++</span><span style="color:#ae81ff">11</span><span style="color:#960050;background-color:#1e0010">支持</span>
+</span></span></code></pre></div><h3 id="msvc">MSVC</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-cpp" data-lang="cpp"><span style="display:flex;"><span>VS <span style="color:#ae81ff">2010</span> (MSVC <span style="color:#ae81ff">16.0</span>) <span style="color:#f92672">-</span> <span style="color:#960050;background-color:#1e0010">部分支持</span> (<span style="color:#66d9ef">auto</span>, lambda, <span style="color:#66d9ef">static_assert</span>)
+</span></span><span style="display:flex;"><span>VS <span style="color:#ae81ff">2012</span> (MSVC <span style="color:#ae81ff">17.0</span>) <span style="color:#f92672">-</span> <span style="color:#960050;background-color:#1e0010">更多特性</span> (range<span style="color:#f92672">-</span><span style="color:#66d9ef">for</span>, <span style="color:#66d9ef">override</span>)
+</span></span><span style="display:flex;"><span>VS <span style="color:#ae81ff">2013</span> (MSVC <span style="color:#ae81ff">18.0</span>) <span style="color:#f92672">-</span> <span style="color:#960050;background-color:#1e0010">委托构造函数</span>, <span style="color:#960050;background-color:#1e0010">变参模板</span>
+</span></span><span style="display:flex;"><span>VS <span style="color:#ae81ff">2015</span> (MSVC <span style="color:#ae81ff">19.0</span>) <span style="color:#f92672">-</span> <span style="color:#960050;background-color:#1e0010">✅</span> C<span style="color:#f92672">++</span><span style="color:#ae81ff">11</span> <span style="color:#960050;background-color:#1e0010">完全支持</span>
+</span></span></code></pre></div><h3 id="使用建议">使用建议</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#75715e"># 最低版本要求 (C++11)</span>
+</span></span><span style="display:flex;"><span>GCC 5.0+
+</span></span><span style="display:flex;"><span>Clang 3.3+
+</span></span><span style="display:flex;"><span>MSVC 2015+
+</span></span></code></pre></div><h2 id="c14-支持情况">C++14 支持情况</h2>
+<h3 id="gcc-1">GCC</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-cpp" data-lang="cpp"><span style="display:flex;"><span>GCC <span style="color:#ae81ff">4.8</span>  <span style="color:#f92672">-</span> <span style="color:#960050;background-color:#1e0010">部分支持</span> (<span style="color:#960050;background-color:#1e0010">返回类型推导</span>)
+</span></span><span style="display:flex;"><span>GCC <span style="color:#ae81ff">4.9</span>  <span style="color:#f92672">-</span> <span style="color:#960050;background-color:#1e0010">通用</span>lambda, <span style="color:#960050;background-color:#1e0010">变量模板</span>
+</span></span><span style="display:flex;"><span>GCC <span style="color:#ae81ff">5.0</span>  <span style="color:#f92672">-</span> <span style="color:#960050;background-color:#1e0010">✅</span> C<span style="color:#f92672">++</span><span style="color:#ae81ff">14</span> <span style="color:#960050;background-color:#1e0010">完全支持</span>
+</span></span></code></pre></div><h3 id="clang-1">Clang</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-cpp" data-lang="cpp"><span style="display:flex;"><span>Clang <span style="color:#ae81ff">3.4</span> <span style="color:#f92672">-</span> <span style="color:#960050;background-color:#1e0010">✅</span> C<span style="color:#f92672">++</span><span style="color:#ae81ff">14</span> <span style="color:#960050;background-color:#1e0010">完全支持</span>
+</span></span></code></pre></div><h3 id="msvc-1">MSVC</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-cpp" data-lang="cpp"><span style="display:flex;"><span>VS <span style="color:#ae81ff">2015</span> Update <span style="color:#ae81ff">3</span> <span style="color:#f92672">-</span> <span style="color:#960050;background-color:#1e0010">✅</span> C<span style="color:#f92672">++</span><span style="color:#ae81ff">14</span> <span style="color:#960050;background-color:#1e0010">完全支持</span>
+</span></span></code></pre></div><h3 id="编译器标志">编译器标志</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#75715e"># GCC</span>
+</span></span><span style="display:flex;"><span>g++ -std<span style="color:#f92672">=</span>c++14 file.cpp
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># Clang  </span>
+</span></span><span style="display:flex;"><span>clang++ -std<span style="color:#f92672">=</span>c++14 file.cpp
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># MSVC</span>
+</span></span><span style="display:flex;"><span>cl /std:c++14 file.cpp
+</span></span></code></pre></div><h2 id="c17-支持情况">C++17 支持情况</h2>
+<h3 id="gcc-2">GCC</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-cpp" data-lang="cpp"><span style="display:flex;"><span>GCC <span style="color:#ae81ff">5.0</span>  <span style="color:#f92672">-</span> <span style="color:#960050;background-color:#1e0010">部分支持</span> (<span style="color:#960050;background-color:#1e0010">嵌套命名空间</span>)
+</span></span><span style="display:flex;"><span>GCC <span style="color:#ae81ff">6.0</span>  <span style="color:#f92672">-</span> <span style="color:#960050;background-color:#1e0010">更多特性</span>
+</span></span><span style="display:flex;"><span>GCC <span style="color:#ae81ff">7.0</span>  <span style="color:#f92672">-</span> <span style="color:#960050;background-color:#1e0010">✅</span> C<span style="color:#f92672">++</span><span style="color:#ae81ff">17</span> <span style="color:#960050;background-color:#1e0010">完全支持</span>
+</span></span><span style="display:flex;"><span>GCC <span style="color:#ae81ff">8.0</span><span style="color:#f92672">+</span> <span style="color:#f92672">-</span> <span style="color:#960050;background-color:#1e0010">稳定的</span>C<span style="color:#f92672">++</span><span style="color:#ae81ff">17</span><span style="color:#960050;background-color:#1e0010">支持</span>
+</span></span></code></pre></div><h3 id="clang-2">Clang</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-cpp" data-lang="cpp"><span style="display:flex;"><span>Clang <span style="color:#ae81ff">4.0</span> <span style="color:#f92672">-</span> <span style="color:#960050;background-color:#1e0010">部分支持</span>
+</span></span><span style="display:flex;"><span>Clang <span style="color:#ae81ff">5.0</span> <span style="color:#f92672">-</span> <span style="color:#960050;background-color:#1e0010">✅</span> C<span style="color:#f92672">++</span><span style="color:#ae81ff">17</span> <span style="color:#960050;background-color:#1e0010">完全支持</span>
+</span></span></code></pre></div><h3 id="msvc-2">MSVC</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-cpp" data-lang="cpp"><span style="display:flex;"><span>VS <span style="color:#ae81ff">2017</span> <span style="color:#ae81ff">15.0</span> <span style="color:#f92672">-</span> <span style="color:#960050;background-color:#1e0010">部分支持</span>
+</span></span><span style="display:flex;"><span>VS <span style="color:#ae81ff">2017</span> <span style="color:#ae81ff">15.3</span> <span style="color:#f92672">-</span> <span style="color:#960050;background-color:#1e0010">大部分特性</span>
+</span></span><span style="display:flex;"><span>VS <span style="color:#ae81ff">2017</span> <span style="color:#ae81ff">15.7</span> <span style="color:#f92672">-</span> <span style="color:#960050;background-color:#1e0010">✅</span> C<span style="color:#f92672">++</span><span style="color:#ae81ff">17</span> <span style="color:#960050;background-color:#1e0010">完全支持</span>
+</span></span></code></pre></div><h3 id="c17特性支持对比">C++17特性支持对比</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-cpp" data-lang="cpp"><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010">特性</span>                    GCC <span style="color:#ae81ff">7.0</span>  Clang <span style="color:#ae81ff">5.0</span>  MSVC <span style="color:#ae81ff">2017.7</span>
+</span></span><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010">结构化绑定</span>              <span style="color:#960050;background-color:#1e0010">✅</span>       <span style="color:#960050;background-color:#1e0010">✅</span>         <span style="color:#960050;background-color:#1e0010">✅</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">if</span> <span style="color:#66d9ef">constexpr</span>           <span style="color:#960050;background-color:#1e0010">✅</span>       <span style="color:#960050;background-color:#1e0010">✅</span>         <span style="color:#960050;background-color:#1e0010">✅</span>
+</span></span><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010">折叠表达式</span>              <span style="color:#960050;background-color:#1e0010">✅</span>       <span style="color:#960050;background-color:#1e0010">✅</span>         <span style="color:#960050;background-color:#1e0010">✅</span>
+</span></span><span style="display:flex;"><span>std<span style="color:#f92672">::</span>optional          <span style="color:#960050;background-color:#1e0010">✅</span>       <span style="color:#960050;background-color:#1e0010">✅</span>         <span style="color:#960050;background-color:#1e0010">✅</span>
+</span></span><span style="display:flex;"><span>std<span style="color:#f92672">::</span>variant           <span style="color:#960050;background-color:#1e0010">✅</span>       <span style="color:#960050;background-color:#1e0010">✅</span>         <span style="color:#960050;background-color:#1e0010">✅</span>
+</span></span><span style="display:flex;"><span>std<span style="color:#f92672">::</span>string_view       <span style="color:#960050;background-color:#1e0010">✅</span>       <span style="color:#960050;background-color:#1e0010">✅</span>         <span style="color:#960050;background-color:#1e0010">✅</span>
+</span></span><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010">文件系统库</span>              <span style="color:#960050;background-color:#1e0010">✅</span>       <span style="color:#960050;background-color:#1e0010">✅</span>         <span style="color:#960050;background-color:#1e0010">✅</span>
+</span></span><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010">并行算法</span>                <span style="color:#960050;background-color:#1e0010">✅</span>       <span style="color:#960050;background-color:#1e0010">❌</span>         <span style="color:#960050;background-color:#1e0010">✅</span>
+</span></span></code></pre></div><h2 id="c20-支持情况">C++20 支持情况</h2>
+<h3 id="gcc-3">GCC</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-cpp" data-lang="cpp"><span style="display:flex;"><span>GCC <span style="color:#ae81ff">8.0</span>  <span style="color:#f92672">-</span> <span style="color:#960050;background-color:#1e0010">部分支持</span> (<span style="color:#960050;background-color:#1e0010">概念实验版</span>)
+</span></span><span style="display:flex;"><span>GCC <span style="color:#ae81ff">9.0</span>  <span style="color:#f92672">-</span> <span style="color:#960050;background-color:#1e0010">更多特性</span>
+</span></span><span style="display:flex;"><span>GCC <span style="color:#ae81ff">10.0</span> <span style="color:#f92672">-</span> <span style="color:#960050;background-color:#1e0010">大部分</span>C<span style="color:#f92672">++</span><span style="color:#ae81ff">20</span><span style="color:#960050;background-color:#1e0010">特性</span>
+</span></span><span style="display:flex;"><span>GCC <span style="color:#ae81ff">11.0</span> <span style="color:#f92672">-</span> <span style="color:#960050;background-color:#1e0010">✅</span> C<span style="color:#f92672">++</span><span style="color:#ae81ff">20</span> <span style="color:#960050;background-color:#1e0010">几乎完全支持</span>
+</span></span><span style="display:flex;"><span>GCC <span style="color:#ae81ff">12.0</span><span style="color:#f92672">+-</span> <span style="color:#960050;background-color:#1e0010">稳定的</span>C<span style="color:#f92672">++</span><span style="color:#ae81ff">20</span><span style="color:#960050;background-color:#1e0010">支持</span>
+</span></span></code></pre></div><h3 id="clang-3">Clang</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-cpp" data-lang="cpp"><span style="display:flex;"><span>Clang <span style="color:#ae81ff">10.0</span> <span style="color:#f92672">-</span> <span style="color:#960050;background-color:#1e0010">部分支持</span>
+</span></span><span style="display:flex;"><span>Clang <span style="color:#ae81ff">12.0</span> <span style="color:#f92672">-</span> <span style="color:#960050;background-color:#1e0010">大部分特性</span>
+</span></span><span style="display:flex;"><span>Clang <span style="color:#ae81ff">14.0</span> <span style="color:#f92672">-</span> <span style="color:#960050;background-color:#1e0010">✅</span> C<span style="color:#f92672">++</span><span style="color:#ae81ff">20</span> <span style="color:#960050;background-color:#1e0010">几乎完全支持</span>
+</span></span><span style="display:flex;"><span>Clang <span style="color:#ae81ff">15.0</span><span style="color:#f92672">+-</span> <span style="color:#960050;background-color:#1e0010">持续完善</span>
+</span></span></code></pre></div><h3 id="msvc-3">MSVC</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-cpp" data-lang="cpp"><span style="display:flex;"><span>VS <span style="color:#ae81ff">2019</span> <span style="color:#ae81ff">16.0</span> <span style="color:#f92672">-</span> <span style="color:#960050;background-color:#1e0010">部分支持</span>
+</span></span><span style="display:flex;"><span>VS <span style="color:#ae81ff">2019</span> <span style="color:#ae81ff">16.8</span> <span style="color:#f92672">-</span> <span style="color:#960050;background-color:#1e0010">大部分特性</span>  
+</span></span><span style="display:flex;"><span>VS <span style="color:#ae81ff">2019</span> <span style="color:#ae81ff">16.11</span><span style="color:#f92672">-</span> <span style="color:#960050;background-color:#1e0010">✅</span> C<span style="color:#f92672">++</span><span style="color:#ae81ff">20</span> <span style="color:#960050;background-color:#1e0010">几乎完全支持</span>
+</span></span><span style="display:flex;"><span>VS <span style="color:#ae81ff">2022</span>      <span style="color:#f92672">-</span> <span style="color:#960050;background-color:#1e0010">持续完善</span>
+</span></span></code></pre></div><h3 id="c20核心特性支持">C++20核心特性支持</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-cpp" data-lang="cpp"><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010">特性</span>                    GCC <span style="color:#ae81ff">11</span>   Clang <span style="color:#ae81ff">14</span>   MSVC <span style="color:#ae81ff">2019.11</span>
+</span></span><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010">概念</span>(Concepts)          <span style="color:#960050;background-color:#1e0010">✅</span>       <span style="color:#960050;background-color:#1e0010">✅</span>         <span style="color:#960050;background-color:#1e0010">✅</span>
+</span></span><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010">模块</span>(Modules)           <span style="color:#960050;background-color:#1e0010">🔶</span>       <span style="color:#960050;background-color:#1e0010">🔶</span>         <span style="color:#960050;background-color:#1e0010">✅</span>
+</span></span><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010">协程</span>(Coroutines)        <span style="color:#960050;background-color:#1e0010">✅</span>       <span style="color:#960050;background-color:#1e0010">✅</span>         <span style="color:#960050;background-color:#1e0010">✅</span>
+</span></span><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010">范围</span>(Ranges)            <span style="color:#960050;background-color:#1e0010">✅</span>       <span style="color:#960050;background-color:#1e0010">✅</span>         <span style="color:#960050;background-color:#1e0010">✅</span>
+</span></span><span style="display:flex;"><span>std<span style="color:#f92672">::</span>format            <span style="color:#960050;background-color:#1e0010">✅</span>       <span style="color:#960050;background-color:#1e0010">❌</span>         <span style="color:#960050;background-color:#1e0010">✅</span>
+</span></span><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010">三路比较</span>(<span style="color:#f92672">&lt;=&gt;</span>)           <span style="color:#960050;background-color:#1e0010">✅</span>       <span style="color:#960050;background-color:#1e0010">✅</span>         <span style="color:#960050;background-color:#1e0010">✅</span>
+</span></span><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010">指定初始化器</span>            <span style="color:#960050;background-color:#1e0010">✅</span>       <span style="color:#960050;background-color:#1e0010">✅</span>         <span style="color:#960050;background-color:#1e0010">✅</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">consteval</span>              <span style="color:#960050;background-color:#1e0010">✅</span>       <span style="color:#960050;background-color:#1e0010">✅</span>         <span style="color:#960050;background-color:#1e0010">✅</span>
+</span></span><span style="display:flex;"><span>constinit              <span style="color:#960050;background-color:#1e0010">✅</span>       <span style="color:#960050;background-color:#1e0010">✅</span>         <span style="color:#960050;background-color:#1e0010">✅</span>
+</span></span></code></pre></div><h3 id="模块支持状态">模块支持状态</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-cpp" data-lang="cpp"><span style="display:flex;"><span><span style="color:#75715e">// GCC 11+
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>import std.core;  <span style="color:#75715e">// 实验性支持
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// Clang 14+  
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>import std;       <span style="color:#75715e">// 实验性支持
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// MSVC 2019.16.8+
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>import std.core;  <span style="color:#75715e">// 较好支持
+</span></span></span></code></pre></div><h2 id="c23-支持情况">C++23 支持情况</h2>
+<h3 id="gcc-4">GCC</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-cpp" data-lang="cpp"><span style="display:flex;"><span>GCC <span style="color:#ae81ff">12.0</span> <span style="color:#f92672">-</span> <span style="color:#960050;background-color:#1e0010">部分支持</span> (<span style="color:#960050;background-color:#1e0010">显式对象参数</span>)
+</span></span><span style="display:flex;"><span>GCC <span style="color:#ae81ff">13.0</span> <span style="color:#f92672">-</span> <span style="color:#960050;background-color:#1e0010">更多特性</span>
+</span></span><span style="display:flex;"><span>GCC <span style="color:#ae81ff">14.0</span> <span style="color:#f92672">-</span> <span style="color:#960050;background-color:#1e0010">✅</span> <span style="color:#960050;background-color:#1e0010">大部分</span>C<span style="color:#f92672">++</span><span style="color:#ae81ff">23</span><span style="color:#960050;background-color:#1e0010">特性</span>
+</span></span></code></pre></div><h3 id="clang-4">Clang</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-cpp" data-lang="cpp"><span style="display:flex;"><span>Clang <span style="color:#ae81ff">15.0</span> <span style="color:#f92672">-</span> <span style="color:#960050;background-color:#1e0010">部分支持</span>
+</span></span><span style="display:flex;"><span>Clang <span style="color:#ae81ff">16.0</span> <span style="color:#f92672">-</span> <span style="color:#960050;background-color:#1e0010">更多特性</span>  
+</span></span><span style="display:flex;"><span>Clang <span style="color:#ae81ff">17.0</span> <span style="color:#f92672">-</span> <span style="color:#960050;background-color:#1e0010">✅</span> <span style="color:#960050;background-color:#1e0010">大部分</span>C<span style="color:#f92672">++</span><span style="color:#ae81ff">23</span><span style="color:#960050;background-color:#1e0010">特性</span>
+</span></span></code></pre></div><h3 id="msvc-4">MSVC</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-cpp" data-lang="cpp"><span style="display:flex;"><span>VS <span style="color:#ae81ff">2022</span> <span style="color:#ae81ff">17.4</span> <span style="color:#f92672">-</span> <span style="color:#960050;background-color:#1e0010">部分支持</span>
+</span></span><span style="display:flex;"><span>VS <span style="color:#ae81ff">2022</span> <span style="color:#ae81ff">17.6</span><span style="color:#f92672">+-</span> <span style="color:#960050;background-color:#1e0010">持续添加特性</span>
+</span></span></code></pre></div><h3 id="c23特性支持">C++23特性支持</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-cpp" data-lang="cpp"><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010">特性</span>                    GCC <span style="color:#ae81ff">14</span>   Clang <span style="color:#ae81ff">17</span>   MSVC <span style="color:#ae81ff">2022.6</span>
+</span></span><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010">显式对象参数</span>            <span style="color:#960050;background-color:#1e0010">✅</span>       <span style="color:#960050;background-color:#1e0010">✅</span>         <span style="color:#960050;background-color:#1e0010">✅</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">if</span> <span style="color:#66d9ef">consteval</span>           <span style="color:#960050;background-color:#1e0010">✅</span>       <span style="color:#960050;background-color:#1e0010">✅</span>         <span style="color:#960050;background-color:#1e0010">✅</span>
+</span></span><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010">多维下标运算符</span>          <span style="color:#960050;background-color:#1e0010">✅</span>       <span style="color:#960050;background-color:#1e0010">✅</span>         <span style="color:#960050;background-color:#1e0010">✅</span>
+</span></span><span style="display:flex;"><span>std<span style="color:#f92672">::</span>expected          <span style="color:#960050;background-color:#1e0010">✅</span>       <span style="color:#960050;background-color:#1e0010">✅</span>         <span style="color:#960050;background-color:#1e0010">✅</span>
+</span></span><span style="display:flex;"><span>std<span style="color:#f92672">::</span>mdspan            <span style="color:#960050;background-color:#1e0010">✅</span>       <span style="color:#960050;background-color:#1e0010">✅</span>         <span style="color:#960050;background-color:#1e0010">✅</span>
+</span></span><span style="display:flex;"><span>std<span style="color:#f92672">::</span>flat_map          <span style="color:#960050;background-color:#1e0010">🔶</span>       <span style="color:#960050;background-color:#1e0010">🔶</span>         <span style="color:#960050;background-color:#1e0010">🔶</span>
+</span></span><span style="display:flex;"><span>std<span style="color:#f92672">::</span>print             <span style="color:#960050;background-color:#1e0010">🔶</span>       <span style="color:#960050;background-color:#1e0010">❌</span>         <span style="color:#960050;background-color:#1e0010">🔶</span>
+</span></span></code></pre></div><h2 id="各编译器版本对应表">各编译器版本对应表</h2>
+<h3 id="gcc版本历史">GCC版本历史</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-cpp" data-lang="cpp"><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010">版本</span>    <span style="color:#960050;background-color:#1e0010">发布年份</span>    <span style="color:#960050;background-color:#1e0010">主要</span>C<span style="color:#f92672">++</span><span style="color:#960050;background-color:#1e0010">特性</span>
+</span></span><span style="display:flex;"><span><span style="color:#ae81ff">4.3</span>     <span style="color:#ae81ff">2008</span>       <span style="color:#960050;background-color:#1e0010">初期</span>C<span style="color:#f92672">++</span><span style="color:#ae81ff">11</span><span style="color:#960050;background-color:#1e0010">支持</span>
+</span></span><span style="display:flex;"><span><span style="color:#ae81ff">4.9</span>     <span style="color:#ae81ff">2014</span>       <span style="color:#960050;background-color:#1e0010">完整</span>C<span style="color:#f92672">++</span><span style="color:#ae81ff">11</span><span style="color:#960050;background-color:#1e0010">支持</span>
+</span></span><span style="display:flex;"><span><span style="color:#ae81ff">5.1</span>     <span style="color:#ae81ff">2015</span>       <span style="color:#960050;background-color:#1e0010">完整</span>C<span style="color:#f92672">++</span><span style="color:#ae81ff">14</span><span style="color:#960050;background-color:#1e0010">支持</span>  
+</span></span><span style="display:flex;"><span><span style="color:#ae81ff">7.1</span>     <span style="color:#ae81ff">2017</span>       <span style="color:#960050;background-color:#1e0010">完整</span>C<span style="color:#f92672">++</span><span style="color:#ae81ff">17</span><span style="color:#960050;background-color:#1e0010">支持</span>
+</span></span><span style="display:flex;"><span><span style="color:#ae81ff">11.1</span>    <span style="color:#ae81ff">2021</span>       <span style="color:#960050;background-color:#1e0010">完整</span>C<span style="color:#f92672">++</span><span style="color:#ae81ff">20</span><span style="color:#960050;background-color:#1e0010">支持</span>
+</span></span><span style="display:flex;"><span><span style="color:#ae81ff">14.1</span>    <span style="color:#ae81ff">2024</span>       <span style="color:#960050;background-color:#1e0010">大部分</span>C<span style="color:#f92672">++</span><span style="color:#ae81ff">23</span><span style="color:#960050;background-color:#1e0010">支持</span>
+</span></span></code></pre></div><h3 id="clang版本历史">Clang版本历史</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-cpp" data-lang="cpp"><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010">版本</span>    <span style="color:#960050;background-color:#1e0010">发布年份</span>    <span style="color:#960050;background-color:#1e0010">主要</span>C<span style="color:#f92672">++</span><span style="color:#960050;background-color:#1e0010">特性</span>
+</span></span><span style="display:flex;"><span><span style="color:#ae81ff">3.3</span>     <span style="color:#ae81ff">2013</span>       <span style="color:#960050;background-color:#1e0010">完整</span>C<span style="color:#f92672">++</span><span style="color:#ae81ff">11</span><span style="color:#960050;background-color:#1e0010">支持</span>
+</span></span><span style="display:flex;"><span><span style="color:#ae81ff">3.4</span>     <span style="color:#ae81ff">2014</span>       <span style="color:#960050;background-color:#1e0010">完整</span>C<span style="color:#f92672">++</span><span style="color:#ae81ff">14</span><span style="color:#960050;background-color:#1e0010">支持</span>
+</span></span><span style="display:flex;"><span><span style="color:#ae81ff">5.0</span>     <span style="color:#ae81ff">2017</span>       <span style="color:#960050;background-color:#1e0010">完整</span>C<span style="color:#f92672">++</span><span style="color:#ae81ff">17</span><span style="color:#960050;background-color:#1e0010">支持</span>
+</span></span><span style="display:flex;"><span><span style="color:#ae81ff">14.0</span>    <span style="color:#ae81ff">2022</span>       <span style="color:#960050;background-color:#1e0010">大部分</span>C<span style="color:#f92672">++</span><span style="color:#ae81ff">20</span><span style="color:#960050;background-color:#1e0010">支持</span>
+</span></span><span style="display:flex;"><span><span style="color:#ae81ff">17.0</span>    <span style="color:#ae81ff">2023</span>       <span style="color:#960050;background-color:#1e0010">大部分</span>C<span style="color:#f92672">++</span><span style="color:#ae81ff">23</span><span style="color:#960050;background-color:#1e0010">支持</span>
+</span></span></code></pre></div><h3 id="msvc版本历史">MSVC版本历史</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-cpp" data-lang="cpp"><span style="display:flex;"><span>VS版本       MSVC版本    <span style="color:#960050;background-color:#1e0010">年份</span>    <span style="color:#960050;background-color:#1e0010">主要</span>C<span style="color:#f92672">++</span><span style="color:#960050;background-color:#1e0010">特性</span>
+</span></span><span style="display:flex;"><span><span style="color:#ae81ff">2015</span>        <span style="color:#ae81ff">19.0</span>        <span style="color:#ae81ff">2015</span>    <span style="color:#960050;background-color:#1e0010">完整</span>C<span style="color:#f92672">++</span><span style="color:#ae81ff">11</span><span style="color:#f92672">/</span><span style="color:#ae81ff">14</span><span style="color:#960050;background-color:#1e0010">支持</span>
+</span></span><span style="display:flex;"><span><span style="color:#ae81ff">2017</span>        <span style="color:#ae81ff">19.1</span>        <span style="color:#ae81ff">2017</span>    <span style="color:#960050;background-color:#1e0010">完整</span>C<span style="color:#f92672">++</span><span style="color:#ae81ff">17</span><span style="color:#960050;background-color:#1e0010">支持</span>
+</span></span><span style="display:flex;"><span><span style="color:#ae81ff">2019</span>        <span style="color:#ae81ff">19.2</span>        <span style="color:#ae81ff">2019</span>    <span style="color:#960050;background-color:#1e0010">大部分</span>C<span style="color:#f92672">++</span><span style="color:#ae81ff">20</span><span style="color:#960050;background-color:#1e0010">支持</span>
+</span></span><span style="display:flex;"><span><span style="color:#ae81ff">2022</span>        <span style="color:#ae81ff">19.3</span>        <span style="color:#ae81ff">2022</span>    <span style="color:#960050;background-color:#1e0010">持续</span>C<span style="color:#f92672">++</span><span style="color:#ae81ff">20</span><span style="color:#f92672">/</span><span style="color:#ae81ff">23</span><span style="color:#960050;background-color:#1e0010">支持</span>
+</span></span></code></pre></div><h2 id="实际开发建议">实际开发建议</h2>
+<h3 id="1-保守选择-最大兼容性">1. 保守选择 (最大兼容性)</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-cpp" data-lang="cpp"><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010">标准</span><span style="color:#f92672">:</span> C<span style="color:#f92672">++</span><span style="color:#ae81ff">17</span>
+</span></span><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010">编译器最低版本</span><span style="color:#f92672">:</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">-</span> GCC <span style="color:#ae81ff">7.0</span><span style="color:#f92672">+</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">-</span> Clang <span style="color:#ae81ff">5.0</span><span style="color:#f92672">+</span>  
+</span></span><span style="display:flex;"><span><span style="color:#f92672">-</span> MSVC <span style="color:#ae81ff">2017.7</span><span style="color:#f92672">+</span>
+</span></span></code></pre></div><h3 id="2-现代选择-平衡新特性和稳定性">2. 现代选择 (平衡新特性和稳定性)</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-cpp" data-lang="cpp"><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010">标准</span><span style="color:#f92672">:</span> C<span style="color:#f92672">++</span><span style="color:#ae81ff">20</span>
+</span></span><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010">编译器推荐版本</span><span style="color:#f92672">:</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">-</span> GCC <span style="color:#ae81ff">11.0</span><span style="color:#f92672">+</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">-</span> Clang <span style="color:#ae81ff">14.0</span><span style="color:#f92672">+</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">-</span> MSVC <span style="color:#ae81ff">2019.11</span><span style="color:#f92672">+</span> <span style="color:#960050;background-color:#1e0010">或</span> VS <span style="color:#ae81ff">2022</span>
+</span></span></code></pre></div><h3 id="3-前沿选择-最新特性">3. 前沿选择 (最新特性)</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-cpp" data-lang="cpp"><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010">标准</span><span style="color:#f92672">:</span> C<span style="color:#f92672">++</span><span style="color:#ae81ff">23</span>
+</span></span><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010">编译器最新版本</span><span style="color:#f92672">:</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">-</span> GCC <span style="color:#ae81ff">14.0</span><span style="color:#f92672">+</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">-</span> Clang <span style="color:#ae81ff">17.0</span><span style="color:#f92672">+</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">-</span> MSVC <span style="color:#ae81ff">2022</span> <span style="color:#960050;background-color:#1e0010">最新版</span>
+</span></span></code></pre></div><h2 id="在线编译器支持">在线编译器支持</h2>
+<h3 id="compiler-explorer-godboltorg">Compiler Explorer (godbolt.org)</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-cpp" data-lang="cpp"><span style="display:flex;"><span>GCC:     <span style="color:#ae81ff">4.4.7</span> <span style="color:#960050;background-color:#1e0010">到最新版本</span>
+</span></span><span style="display:flex;"><span>Clang:   <span style="color:#ae81ff">3.0.0</span> <span style="color:#960050;background-color:#1e0010">到最新版本</span>  
+</span></span><span style="display:flex;"><span>MSVC:    <span style="color:#ae81ff">19.0</span> <span style="color:#960050;background-color:#1e0010">到最新版本</span>
+</span></span><span style="display:flex;"><span>ICC:     <span style="color:#ae81ff">13.0.1</span> <span style="color:#960050;background-color:#1e0010">到最新版本</span>
+</span></span></code></pre></div><h3 id="在线ide">在线IDE</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-cpp" data-lang="cpp"><span style="display:flex;"><span>Replit:    GCC <span style="color:#ae81ff">9.3</span>, <span style="color:#960050;background-color:#1e0010">支持到</span>C<span style="color:#f92672">++</span><span style="color:#ae81ff">17</span>
+</span></span><span style="display:flex;"><span>CodePen:   <span style="color:#960050;background-color:#1e0010">现代浏览器编译器</span>
+</span></span><span style="display:flex;"><span>Wandbox:   <span style="color:#960050;background-color:#1e0010">多种编译器版本</span>
+</span></span></code></pre></div><h2 id="cmake版本要求">CMake版本要求</h2>
+<h3 id="c标准与cmake">C++标准与CMake</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-cmake" data-lang="cmake"><span style="display:flex;"><span><span style="color:#75715e"># C++11
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>cmake_minimum_required(<span style="color:#e6db74">VERSION</span> <span style="color:#e6db74">3.1</span>)<span style="color:#960050;background-color:#1e0010">
+</span></span></span><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010"></span>set(<span style="color:#e6db74">CMAKE_CXX_STANDARD</span> <span style="color:#e6db74">11</span>)<span style="color:#960050;background-color:#1e0010">
+</span></span></span><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010">
+</span></span></span><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010"></span><span style="color:#75715e"># C++14  
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>cmake_minimum_required(<span style="color:#e6db74">VERSION</span> <span style="color:#e6db74">3.1</span>)<span style="color:#960050;background-color:#1e0010">
+</span></span></span><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010"></span>set(<span style="color:#e6db74">CMAKE_CXX_STANDARD</span> <span style="color:#e6db74">14</span>)<span style="color:#960050;background-color:#1e0010">
+</span></span></span><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010">
+</span></span></span><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010"></span><span style="color:#75715e"># C++17
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>cmake_minimum_required(<span style="color:#e6db74">VERSION</span> <span style="color:#e6db74">3.8</span>)<span style="color:#960050;background-color:#1e0010">
+</span></span></span><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010"></span>set(<span style="color:#e6db74">CMAKE_CXX_STANDARD</span> <span style="color:#e6db74">17</span>)<span style="color:#960050;background-color:#1e0010">
+</span></span></span><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010">
+</span></span></span><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010"></span><span style="color:#75715e"># C++20
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>cmake_minimum_required(<span style="color:#e6db74">VERSION</span> <span style="color:#e6db74">3.12</span>)<span style="color:#960050;background-color:#1e0010">
+</span></span></span><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010"></span>set(<span style="color:#e6db74">CMAKE_CXX_STANDARD</span> <span style="color:#e6db74">20</span>)<span style="color:#960050;background-color:#1e0010">
+</span></span></span><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010">
+</span></span></span><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010"></span><span style="color:#75715e"># C++23
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>cmake_minimum_required(<span style="color:#e6db74">VERSION</span> <span style="color:#e6db74">3.20</span>)<span style="color:#960050;background-color:#1e0010">
+</span></span></span><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010"></span>set(<span style="color:#e6db74">CMAKE_CXX_STANDARD</span> <span style="color:#e6db74">23</span>)<span style="color:#960050;background-color:#1e0010">
+</span></span></span></code></pre></div><h2 id="特性检测宏">特性检测宏</h2>
+<h3 id="编译器检测">编译器检测</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-cpp" data-lang="cpp"><span style="display:flex;"><span><span style="color:#75715e">// 编译器检测
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#75715e">#ifdef __GNUC__
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#75715e">// GCC编译器
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#75715e">#define GCC_VERSION (__GNUC__ * 10000 + __GNUC_MINOR__ * 100)
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">#endif
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">#ifdef __clang__
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#75715e">// Clang编译器
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#75715e">#define CLANG_VERSION (__clang_major__ * 10000 + __clang_minor__ * 100)
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">#endif
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">#ifdef _MSC_VER
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#75715e">// MSVC编译器
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#75715e">// _MSC_VER 值对应版本
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#75715e">#endif
+</span></span></span></code></pre></div><h3 id="c标准检测">C++标准检测</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-cpp" data-lang="cpp"><span style="display:flex;"><span><span style="color:#75715e">// C++标准检测
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#75715e">#if __cplusplus &gt;= 202302L
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#75715e">#define CPP23_OR_LATER
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">#elif __cplusplus &gt;= 202002L  
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#75715e">#define CPP20_OR_LATER
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">#elif __cplusplus &gt;= 201703L
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#75715e">#define CPP17_OR_LATER
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">#elif __cplusplus &gt;= 201402L
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#75715e">#define CPP14_OR_LATER
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">#elif __cplusplus &gt;= 201103L
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#75715e">#define CPP11_OR_LATER
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">#endif
+</span></span></span></code></pre></div><h3 id="特性检测">特性检测</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-cpp" data-lang="cpp"><span style="display:flex;"><span><span style="color:#75715e">// 特性检测宏
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#75715e">#ifdef __cpp_concepts
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#75715e">// 概念支持
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#75715e">#endif
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">#ifdef __cpp_modules  
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#75715e">// 模块支持
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#75715e">#endif
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">#ifdef __cpp_coroutines
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#75715e">// 协程支持  
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#75715e">#endif
+</span></span></span></code></pre></div><h2 id="性能对比">性能对比</h2>
+<h3 id="编译速度-相对比较">编译速度 (相对比较)</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-cpp" data-lang="cpp"><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010">编译器</span>        <span style="color:#960050;background-color:#1e0010">相对速度</span>    <span style="color:#960050;background-color:#1e0010">内存使用</span>
+</span></span><span style="display:flex;"><span>Clang        <span style="color:#960050;background-color:#1e0010">★★★★☆</span>      <span style="color:#960050;background-color:#1e0010">★★★☆☆</span>
+</span></span><span style="display:flex;"><span>GCC          <span style="color:#960050;background-color:#1e0010">★★★☆☆</span>      <span style="color:#960050;background-color:#1e0010">★★☆☆☆</span>  
+</span></span><span style="display:flex;"><span>MSVC         <span style="color:#960050;background-color:#1e0010">★★☆☆☆</span>      <span style="color:#960050;background-color:#1e0010">★★★★☆</span>
+</span></span><span style="display:flex;"><span>ICC          <span style="color:#960050;background-color:#1e0010">★★☆☆☆</span>      <span style="color:#960050;background-color:#1e0010">★★★☆☆</span>
+</span></span></code></pre></div><h3 id="优化性能-生成代码质量">优化性能 (生成代码质量)</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-cpp" data-lang="cpp"><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010">编译器</span>        <span style="color:#960050;background-color:#1e0010">优化质量</span>    <span style="color:#960050;background-color:#1e0010">数学计算</span>    <span style="color:#960050;background-color:#1e0010">并行优化</span>
+</span></span><span style="display:flex;"><span>GCC          <span style="color:#960050;background-color:#1e0010">★★★★☆</span>      <span style="color:#960050;background-color:#1e0010">★★★★☆</span>      <span style="color:#960050;background-color:#1e0010">★★★☆☆</span>
+</span></span><span style="display:flex;"><span>Clang        <span style="color:#960050;background-color:#1e0010">★★★★☆</span>      <span style="color:#960050;background-color:#1e0010">★★★★☆</span>      <span style="color:#960050;background-color:#1e0010">★★★★☆</span>
+</span></span><span style="display:flex;"><span>MSVC         <span style="color:#960050;background-color:#1e0010">★★★☆☆</span>      <span style="color:#960050;background-color:#1e0010">★★★☆☆</span>      <span style="color:#960050;background-color:#1e0010">★★★☆☆</span>
+</span></span><span style="display:flex;"><span>ICC          <span style="color:#960050;background-color:#1e0010">★★★★★</span>      <span style="color:#960050;background-color:#1e0010">★★★★★</span>      <span style="color:#960050;background-color:#1e0010">★★★★★</span>
+</span></span></code></pre></div><h2 id="实用建议">实用建议</h2>
+<h3 id="1-跨平台开发">1. 跨平台开发</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-cpp" data-lang="cpp"><span style="display:flex;"><span><span style="color:#75715e">// 推荐组合
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>Linux:   GCC <span style="color:#ae81ff">11</span><span style="color:#f92672">+</span> <span style="color:#960050;background-color:#1e0010">或</span> Clang <span style="color:#ae81ff">14</span><span style="color:#f92672">+</span>
+</span></span><span style="display:flex;"><span>macOS:   Clang <span style="color:#ae81ff">14</span><span style="color:#f92672">+</span> (Xcode Command Line Tools)
+</span></span><span style="display:flex;"><span>Windows: MSVC <span style="color:#ae81ff">2022</span> <span style="color:#960050;background-color:#1e0010">或</span> GCC <span style="color:#ae81ff">11</span><span style="color:#f92672">+</span> (MinGW<span style="color:#f92672">-</span>w64)
+</span></span></code></pre></div><h3 id="2-持续集成">2. 持续集成</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-yaml" data-lang="yaml"><span style="display:flex;"><span><span style="color:#75715e"># GitHub Actions 示例</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">matrix</span>:
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">compiler</span>: [<span style="color:#ae81ff">gcc-11, clang-14, msvc-2022]</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">standard</span>: [<span style="color:#ae81ff">17</span>, <span style="color:#ae81ff">20</span>]
+</span></span></code></pre></div><h3 id="3-编译器切换">3. 编译器切换</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#75715e"># 使用update-alternatives管理多版本GCC</span>
+</span></span><span style="display:flex;"><span>sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-11 <span style="color:#ae81ff">60</span>
+</span></span><span style="display:flex;"><span>sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-11 <span style="color:#ae81ff">60</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># 环境变量切换</span>
+</span></span><span style="display:flex;"><span>export CC<span style="color:#f92672">=</span>clang-14
+</span></span><span style="display:flex;"><span>export CXX<span style="color:#f92672">=</span>clang++-14
+</span></span></code></pre></div><p>这份文档提供了C++各版本在不同编译器中的详细支持情况，可以帮助你选择合适的编译器和C++标准版本。</p>
+
+</main>
+
+  <footer>
+  
+  
+  </footer>
+  </body>
+</html>
+
