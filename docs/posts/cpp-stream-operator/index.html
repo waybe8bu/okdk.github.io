@@ -176,6 +176,7 @@
 <p>这不是历史遗留问题，而是经过深思熟虑的设计决策，体现了C++作为&quot;更好的C&quot;和面向对象语言的设计哲学。现代C++（C++20/23）中引入<code>std::format</code>和<code>std::print</code>，说明语言在不断演进，但<code>&lt;&lt;</code>运算符仍然是C++输出的核心方式。</p>
 <hr>
 <p>AI 回答的有点 &ldquo;客气&rdquo;，reddit 这个应该是个人认为的最好回答：</p>
+<p><a href="https://www.reddit.com/r/cpp/comments/xbn04o/why_does_c_use_the_insertion_and_extraction/?tl=zh-hans">https://www.reddit.com/r/cpp/comments/xbn04o/why_does_c_use_the_insertion_and_extraction/?tl=zh-hans</a></p>
 <blockquote>
 <p>说实话，这只是为了确保类型安全的一个小技巧。仅此而已。他们也可以这样设计：</p>
 <pre tabindex="0"><code>cout.write(&#34;我的名字是 &#34;).write(name).write(&#34; 并且我今年 &#34;).write(age).write(&#34; 岁。\n&#34;);

@@ -202,6 +202,8 @@ C++选择`<<`运算符而非函数的原因：
 
 AI 回答的有点 "客气"，reddit 这个应该是个人认为的最好回答：
 
+https://www.reddit.com/r/cpp/comments/xbn04o/why_does_c_use_the_insertion_and_extraction/?tl=zh-hans
+
 >说实话，这只是为了确保类型安全的一个小技巧。仅此而已。他们也可以这样设计：
 >
 >```
