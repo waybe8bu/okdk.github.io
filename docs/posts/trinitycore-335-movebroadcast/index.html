@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en-us">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>TrinityCore 玩家移动信息的广播机制 | okie dokie</title>
+    <link rel="stylesheet" href="/css/style.css" />
+    <link rel="stylesheet" href="/css/fonts.css" />
+    
+  </head>
+
+  <body>
+    <nav>
+    <ul class="menu">
+      
+      <li><a href="/">Home</a></li>
+      
+      <li><a href="/posts">All posts</a></li>
+      
+    </ul>
+    <hr/>
+    </nav>
+
+<div class="article-meta">
+<h1><span class="title">TrinityCore 玩家移动信息的广播机制</span></h1>
+
+<h2 class="date">2024/01/09</h2>
+</div>
+
+<main>
+<p>分析TrinityCore-3.3.5下的代码，解释服务端是在哪些时机以及如何同步某个玩家的移动信息给周围玩家的</p>
+<p>我来帮你分析TrinityCore-3.3.5服务端是如何同步玩家移动信息的。让我深入查看相关代码： 现在让我查看移动处理的核心部分： 让我继续查看移动处理的关键部分，特别是如何广播给周围玩家： 现在让我查看SendMessageToSet方法的实现： 现在让我查看消息分发器的实现： 现在让我查看Grid系统的实现： 让我查看MessageDistDeliverer的Visit实现： 现在让我查看可见距离的定义： 现在让我查看地图的可见距离配置： 现在让我整理分析结果。根据我对TrinityCore-3.3.5代码的深入分析，我来详细解释服务端如何同步玩家移动信息：</p>
+<h2 id="trinitycore-335-移动同步机制分析">TrinityCore-3.3.5 移动同步机制分析</h2>
+<h3 id="-核心同步时机">🎯 核心同步时机</h3>
+<h4 id="1-玩家移动数据接收处理">1. <strong>玩家移动数据接收处理</strong></h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-cpp" data-lang="cpp"><span style="display:flex;"><span><span style="color:#75715e">// 位置：MovementHandler.cpp::HandleMovementOpcodes()
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">void</span> WorldSession<span style="color:#f92672">::</span>HandleMovementOpcodes(WorldPacket<span style="color:#f92672">&amp;</span> recvPacket)
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// 1. 验证移动数据有效性
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    MovementInfo movementInfo;
+</span></span><span style="display:flex;"><span>    ReadMovementInfo(recvPacket, <span style="color:#f92672">&amp;</span>movementInfo);
+</span></span><span style="display:flex;"><span>    
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// 2. 时间同步处理
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    int64 movementTime <span style="color:#f92672">=</span> (int64) movementInfo.time <span style="color:#f92672">+</span> _timeSyncClockDelta;
+</span></span><span style="display:flex;"><span>    movementInfo.time <span style="color:#f92672">=</span> (uint32)movementTime;
+</span></span><span style="display:flex;"><span>    
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// 3. 重新打包移动数据
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    WorldPacket <span style="color:#a6e22e">data</span>(opcode, recvPacket.size());
+</span></span><span style="display:flex;"><span>    movementInfo.guid <span style="color:#f92672">=</span> mover<span style="color:#f92672">-&gt;</span>GetGUID();
+</span></span><span style="display:flex;"><span>    WriteMovementInfo(<span style="color:#f92672">&amp;</span>data, <span style="color:#f92672">&amp;</span>movementInfo);
+</span></span><span style="display:flex;"><span>    
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// 4. 广播给周围玩家 - 关键步骤
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    mover<span style="color:#f92672">-&gt;</span>SendMessageToSet(<span style="color:#f92672">&amp;</span>data, _player);
+</span></span><span style="display:flex;"><span>    
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// 5. 更新服务器端位置
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    mover<span style="color:#f92672">-&gt;</span>m_movementInfo <span style="color:#f92672">=</span> movementInfo;
+</span></span><span style="display:flex;"><span>    mover<span style="color:#f92672">-&gt;</span>UpdatePosition(movementInfo.pos);
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><h4 id="2-服务器主动移动同步">2. <strong>服务器主动移动同步</strong></h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-cpp" data-lang="cpp"><span style="display:flex;"><span><span style="color:#75715e">// 位置：Unit.cpp::UpdateSplineMovement()
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">void</span> Unit<span style="color:#f92672">::</span>UpdateSplineMovement(uint32 t_diff)
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// Spline移动的定期同步
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">if</span> (movespline<span style="color:#f92672">-&gt;</span>isCyclic())
+</span></span><span style="display:flex;"><span>    {
+</span></span><span style="display:flex;"><span>        m_splineSyncTimer.Update(t_diff);
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> (m_splineSyncTimer.Passed())
+</span></span><span style="display:flex;"><span>        {
+</span></span><span style="display:flex;"><span>            m_splineSyncTimer.Reset(<span style="color:#ae81ff">5000</span>); <span style="color:#75715e">// 每5秒同步一次
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>            
+</span></span><span style="display:flex;"><span>            WorldPacket <span style="color:#a6e22e">data</span>(SMSG_FLIGHT_SPLINE_SYNC, <span style="color:#ae81ff">4</span> <span style="color:#f92672">+</span> GetPackGUID().size());
+</span></span><span style="display:flex;"><span>            Movement<span style="color:#f92672">::</span>PacketBuilder<span style="color:#f92672">::</span>WriteSplineSync(<span style="color:#f92672">*</span>movespline, data);
+</span></span><span style="display:flex;"><span>            data.appendPackGUID(GetGUID());
+</span></span><span style="display:flex;"><span>            SendMessageToSet(<span style="color:#f92672">&amp;</span>data, true); <span style="color:#75715e">// 广播给周围玩家
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        }
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><h3 id="-同步触发条件">🔄 同步触发条件</h3>
+<p>TrinityCore在以下情况下会同步移动信息：</p>
+<h4 id="a-客户端主动移动">A. <strong>客户端主动移动</strong></h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-cpp" data-lang="cpp"><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010">触发消息类型</span><span style="color:#f92672">:</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">-</span> MSG_MOVE_START_FORWARD<span style="color:#f92672">/</span>BACKWARD  <span style="color:#75715e">// 开始前进/后退
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#f92672">-</span> MSG_MOVE_START_STRAFE_LEFT<span style="color:#f92672">/</span>RIGHT <span style="color:#75715e">// 开始平移
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#f92672">-</span> MSG_MOVE_START_TURN_LEFT<span style="color:#f92672">/</span>RIGHT   <span style="color:#75715e">// 开始转向
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#f92672">-</span> MSG_MOVE_STOP                    <span style="color:#75715e">// 停止移动
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#f92672">-</span> MSG_MOVE_JUMP                    <span style="color:#75715e">// 跳跃
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#f92672">-</span> MSG_MOVE_FALL_LAND              <span style="color:#75715e">// 着陆
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#f92672">-</span> MSG_MOVE_SET_FACING             <span style="color:#75715e">// 设置朝向
+</span></span></span></code></pre></div><h4 id="b-服务器强制移动">B. <strong>服务器强制移动</strong></h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-cpp" data-lang="cpp"><span style="display:flex;"><span><span style="color:#75715e">// 传送、击退、技能位移等
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>mover<span style="color:#f92672">-&gt;</span>SendMessageToSet(<span style="color:#f92672">&amp;</span>data, true);
+</span></span></code></pre></div><h4 id="c-定期同步-反作弊">C. <strong>定期同步 (反作弊)</strong></h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-cpp" data-lang="cpp"><span style="display:flex;"><span><span style="color:#75715e">// Spline移动每5秒强制同步一次
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>m_splineSyncTimer.Reset(<span style="color:#ae81ff">5000</span>);
+</span></span></code></pre></div><h3 id="-广播范围和机制">📡 广播范围和机制</h3>
+<h4 id="1-sendmessagetoset-核心方法">1. <strong>SendMessageToSet 核心方法</strong></h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-cpp" data-lang="cpp"><span style="display:flex;"><span><span style="color:#75715e">// 位置：Object.cpp
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">void</span> WorldObject<span style="color:#f92672">::</span>SendMessageToSet(WorldPacket <span style="color:#66d9ef">const</span><span style="color:#f92672">*</span> data, <span style="color:#66d9ef">bool</span> self) <span style="color:#66d9ef">const</span>
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> (IsInWorld())
+</span></span><span style="display:flex;"><span>        SendMessageToSetInRange(data, GetVisibilityRange(), self);
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">void</span> WorldObject<span style="color:#f92672">::</span>SendMessageToSetInRange(WorldPacket <span style="color:#66d9ef">const</span><span style="color:#f92672">*</span> data, <span style="color:#66d9ef">float</span> dist, <span style="color:#66d9ef">bool</span> <span style="color:#75715e">/*self*/</span>) <span style="color:#66d9ef">const</span>
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>    Trinity<span style="color:#f92672">::</span>MessageDistDeliverer notifier(<span style="color:#66d9ef">this</span>, data, dist);
+</span></span><span style="display:flex;"><span>    Cell<span style="color:#f92672">::</span>VisitWorldObjects(<span style="color:#66d9ef">this</span>, notifier, dist);
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><h4 id="2-距离计算和过滤">2. <strong>距离计算和过滤</strong></h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-cpp" data-lang="cpp"><span style="display:flex;"><span><span style="color:#75715e">// 位置：GridNotifiers.cpp::MessageDistDeliverer::Visit()
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">void</span> MessageDistDeliverer<span style="color:#f92672">::</span>Visit(PlayerMapType <span style="color:#f92672">&amp;</span>m)
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">for</span> (PlayerMapType<span style="color:#f92672">::</span>iterator iter <span style="color:#f92672">=</span> m.begin(); iter <span style="color:#f92672">!=</span> m.end(); <span style="color:#f92672">++</span>iter)
+</span></span><span style="display:flex;"><span>    {
+</span></span><span style="display:flex;"><span>        Player<span style="color:#f92672">*</span> target <span style="color:#f92672">=</span> iter<span style="color:#f92672">-&gt;</span>GetSource();
+</span></span><span style="display:flex;"><span>        
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e">// 1. 相位检查
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        <span style="color:#66d9ef">if</span> (<span style="color:#f92672">!</span>target<span style="color:#f92672">-&gt;</span>InSamePhase(i_phaseMask))
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">continue</span>;
+</span></span><span style="display:flex;"><span>            
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e">// 2. 距离检查 (2D距离)
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        <span style="color:#66d9ef">if</span> (target<span style="color:#f92672">-&gt;</span>GetExactDist2dSq(i_source) <span style="color:#f92672">&gt;</span> i_distSq)
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">continue</span>;
+</span></span><span style="display:flex;"><span>            
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e">// 3. 可见性检查
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        <span style="color:#66d9ef">if</span> (<span style="color:#f92672">!</span>target<span style="color:#f92672">-&gt;</span>HaveAtClient(i_source))
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">return</span>;
+</span></span><span style="display:flex;"><span>            
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e">// 4. 发送数据包
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        target<span style="color:#f92672">-&gt;</span>SendDirectMessage(i_message);
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><h4 id="3-可见距离配置">3. <strong>可见距离配置</strong></h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-cpp" data-lang="cpp"><span style="display:flex;"><span><span style="color:#75715e">// 不同地图类型的可见距离
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#960050;background-color:#1e0010">普通地图</span><span style="color:#f92672">:</span> World<span style="color:#f92672">::</span>GetMaxVisibleDistanceOnContinents()  <span style="color:#75715e">// 通常 90-120码
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#960050;background-color:#1e0010">副本</span><span style="color:#f92672">:</span>    World<span style="color:#f92672">::</span>GetMaxVisibleDistanceInInstances()   <span style="color:#75715e">// 通常 60-80码  
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#960050;background-color:#1e0010">战场</span><span style="color:#f92672">:</span>    World<span style="color:#f92672">::</span>GetMaxVisibleDistanceInBG()          <span style="color:#75715e">// 通常 100码
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#960050;background-color:#1e0010">竞技场</span><span style="color:#f92672">:</span>  World<span style="color:#f92672">::</span>GetMaxVisibleDistanceInArenas()      <span style="color:#75715e">// 通常 40-60码
+</span></span></span></code></pre></div><h3 id="-grid系统优化">🗂️ Grid系统优化</h3>
+<h4 id="1-空间分割">1. <strong>空间分割</strong></h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-cpp" data-lang="cpp"><span style="display:flex;"><span><span style="color:#75715e">// TrinityCore使用Grid系统分割地图空间
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">// 只访问移动玩家周围的Grid单元格
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>Cell<span style="color:#f92672">::</span>VisitWorldObjects(<span style="color:#66d9ef">this</span>, notifier, dist);
+</span></span></code></pre></div><h4 id="2-高效遍历">2. <strong>高效遍历</strong></h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-cpp" data-lang="cpp"><span style="display:flex;"><span><span style="color:#75715e">// 不是遍历所有在线玩家，而是只遍历附近Grid中的玩家
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">// 大大减少了CPU开销
+</span></span></span></code></pre></div><h3 id="-同步过滤条件">🚫 同步过滤条件</h3>
+<p>服务器<strong>不会</strong>向以下玩家发送移动数据：</p>
+<h4 id="1-基础过滤">1. <strong>基础过滤</strong></h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-cpp" data-lang="cpp"><span style="display:flex;"><span><span style="color:#66d9ef">void</span> MessageDistDeliverer<span style="color:#f92672">::</span>SendPacket(Player<span style="color:#f92672">*</span> player)
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// 不发送给自己
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">if</span> (player <span style="color:#f92672">==</span> i_source)
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">return</span>;
+</span></span><span style="display:flex;"><span>        
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// 阵营过滤 (如果启用)
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">if</span> (team <span style="color:#f92672">&amp;&amp;</span> player<span style="color:#f92672">-&gt;</span>GetTeam() <span style="color:#f92672">!=</span> team)
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">return</span>;
+</span></span><span style="display:flex;"><span>        
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// 指定跳过的玩家
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">if</span> (skipped_receiver <span style="color:#f92672">==</span> player)
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">return</span>;
+</span></span><span style="display:flex;"><span>        
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// 客户端没有该对象的数据
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">if</span> (<span style="color:#f92672">!</span>player<span style="color:#f92672">-&gt;</span>HaveAtClient(i_source))
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">return</span>;
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><h4 id="2-距离过滤">2. <strong>距离过滤</strong></h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-cpp" data-lang="cpp"><span style="display:flex;"><span><span style="color:#75715e">// 超出可见距离的玩家不接收移动数据
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">if</span> (target<span style="color:#f92672">-&gt;</span>GetExactDist2dSq(i_source) <span style="color:#f92672">&gt;</span> i_distSq)
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">continue</span>;
+</span></span></code></pre></div><h4 id="3-相位过滤">3. <strong>相位过滤</strong></h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-cpp" data-lang="cpp"><span style="display:flex;"><span><span style="color:#75715e">// 不同相位的玩家互相不可见
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">if</span> (<span style="color:#f92672">!</span>target<span style="color:#f92672">-&gt;</span>InSamePhase(i_phaseMask))
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">continue</span>;
+</span></span></code></pre></div><h3 id="-性能优化策略">⚡ 性能优化策略</h3>
+<h4 id="1-数据包复用">1. <strong>数据包复用</strong></h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-cpp" data-lang="cpp"><span style="display:flex;"><span><span style="color:#75715e">// 同一个移动数据包复用给所有接收者
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">// 避免重复序列化
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>WorldPacket <span style="color:#a6e22e">data</span>(opcode, recvPacket.size());
+</span></span><span style="display:flex;"><span>WriteMovementInfo(<span style="color:#f92672">&amp;</span>data, <span style="color:#f92672">&amp;</span>movementInfo);
+</span></span><span style="display:flex;"><span>mover<span style="color:#f92672">-&gt;</span>SendMessageToSet(<span style="color:#f92672">&amp;</span>data, _player);
+</span></span></code></pre></div><h4 id="2-grid空间索引">2. <strong>Grid空间索引</strong></h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-cpp" data-lang="cpp"><span style="display:flex;"><span><span style="color:#75715e">// 使用空间分割避免全局遍历
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">// 只检查移动单位周围的Grid单元格
+</span></span></span></code></pre></div><h4 id="3-异步发送">3. <strong>异步发送</strong></h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-cpp" data-lang="cpp"><span style="display:flex;"><span><span style="color:#75715e">// 网络发送是异步的，不阻塞游戏循环
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>target<span style="color:#f92672">-&gt;</span>SendDirectMessage(i_message);
+</span></span></code></pre></div><h3 id="-实际执行流程">📊 实际执行流程</h3>
+<h4 id="完整的移动同步流程">完整的移动同步流程：</h4>
+<pre tabindex="0"><code>1. 客户端发送移动包 → 服务器
+2. 服务器验证移动数据有效性
+3. 服务器时间同步处理
+4. 重新打包移动数据
+5. 确定广播范围 (GetVisibilityRange)
+6. 遍历范围内的Grid单元格
+7. 对每个玩家进行过滤检查：
+   - 距离检查
+   - 相位检查  
+   - 可见性检查
+   - 阵营检查 (如适用)
+8. 向符合条件的玩家发送移动数据包
+9. 更新服务器端移动状态
+</code></pre><h3 id="-关键要点总结">🎯 关键要点总结</h3>
+<ol>
+<li><strong>事件驱动</strong>: 只在移动状态改变时同步，不是每帧同步</li>
+<li><strong>距离优化</strong>: 只向可见距离内的玩家发送数据</li>
+<li><strong>Grid系统</strong>: 空间分割避免全局遍历，大幅提升性能</li>
+<li><strong>智能过滤</strong>: 多层过滤确保只发送必要的数据</li>
+<li><strong>数据包复用</strong>: 一次构建，多次发送，减少CPU开销</li>
+<li><strong>异步网络</strong>: 网络发送不阻塞游戏主循环</li>
+</ol>
+<p>这种设计确保了即使在高并发情况下，移动同步也能保持高效率和低延迟。</p>
+
+</main>
+
+  <footer>
+  
+  
+  </footer>
+  </body>
+</html>
+
