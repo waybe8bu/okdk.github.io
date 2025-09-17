@@ -99,7 +99,7 @@ console.log(cnt);
 console.log(cntColored);
 ```
 
-蓝色为头，绿色是 section header table，紫色是所有的 sections（不同的段没有用颜色区分，因为数据段和只读数据段有重叠）：
+蓝色为头，绿色是 section header table，紫色是所有的 sections（不同的段没有用颜色区分，因为段有重叠）：
 
 ![](/images/1758091659979.png)
 
