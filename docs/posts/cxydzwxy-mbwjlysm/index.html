@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en-us">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>程序员的自我修养 - 目标文件里有什么 | okie dokie</title>
+    <link rel="stylesheet" href="/css/style.css" />
+    <link rel="stylesheet" href="/css/fonts.css" />
+    
+  </head>
+
+  <body>
+    <nav>
+    <ul class="menu">
+      
+      <li><a href="/">Home</a></li>
+      
+      <li><a href="/posts">All posts</a></li>
+      
+    </ul>
+    <hr/>
+    </nav>
+
+<div class="article-meta">
+<h1><span class="title">程序员的自我修养 - 目标文件里有什么</span></h1>
+
+<h2 class="date">2024/01/10</h2>
+</div>
+
+<main>
+<p>原文示例代码：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#66d9ef">int</span> <span style="color:#a6e22e">printf</span>(<span style="color:#66d9ef">const</span> <span style="color:#66d9ef">char</span> <span style="color:#f92672">*</span>format, ...);                                                                                                                                                                      
+</span></span><span style="display:flex;"><span>  
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">int</span> global_init_var <span style="color:#f92672">=</span> <span style="color:#ae81ff">84</span>; 
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">int</span> global_uninit_var;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">void</span> <span style="color:#a6e22e">func1</span>(<span style="color:#66d9ef">int</span> i)
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">printf</span>(<span style="color:#e6db74">&#34;%d</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>, i); 
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">int</span> <span style="color:#a6e22e">main</span>(<span style="color:#66d9ef">void</span>)
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">static</span> <span style="color:#66d9ef">int</span> static_var <span style="color:#f92672">=</span> <span style="color:#ae81ff">85</span>; 
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">static</span> <span style="color:#66d9ef">int</span> static_var2;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">int</span> a <span style="color:#f92672">=</span> <span style="color:#ae81ff">1</span>;
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">int</span> b;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">func1</span>(static_var <span style="color:#f92672">+</span> static_var2 <span style="color:#f92672">+</span> a <span style="color:#f92672">+</span> b); 
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> a;
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>简单起见编译到 x86 arch，mac homebrew 安装 <code>i686-elf-gcc</code>/<code>i686-elf-binutils</code> 两个，编译：</p>
+<pre tabindex="0"><code>/opt/homebrew/bin/i686-elf-gcc -c 1.c
+</code></pre><p>手搓个 js 直观感受下字节码内部结构的相对位置：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-js" data-lang="js"><span style="display:flex;"><span><span style="color:#66d9ef">const</span> <span style="color:#a6e22e">FS</span> <span style="color:#f92672">=</span> <span style="color:#a6e22e">require</span>(<span style="color:#e6db74">&#39;node:fs&#39;</span>),
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">TOOLS</span> <span style="color:#f92672">=</span> {
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">read</span><span style="color:#f92672">:</span> (<span style="color:#a6e22e">hex</span>, <span style="color:#a6e22e">offsetBytes</span>, <span style="color:#a6e22e">sizeBytes</span>) =&gt; {
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">return</span> <span style="color:#a6e22e">hex</span>.<span style="color:#a6e22e">slice</span>(<span style="color:#a6e22e">offsetBytes</span> <span style="color:#f92672">*</span> <span style="color:#ae81ff">2</span>, <span style="color:#a6e22e">offsetBytes</span> <span style="color:#f92672">*</span> <span style="color:#ae81ff">2</span> <span style="color:#f92672">+</span> <span style="color:#a6e22e">sizeBytes</span> <span style="color:#f92672">*</span> <span style="color:#ae81ff">2</span>);
+</span></span><span style="display:flex;"><span>        },
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">readLE</span><span style="color:#f92672">:</span> (<span style="color:#a6e22e">hex</span>, <span style="color:#a6e22e">offsetBytes</span>, <span style="color:#a6e22e">sizeBytes</span>) =&gt; {
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">return</span> <span style="color:#a6e22e">hex</span>.<span style="color:#a6e22e">slice</span>(<span style="color:#a6e22e">offsetBytes</span> <span style="color:#f92672">*</span> <span style="color:#ae81ff">2</span>, <span style="color:#a6e22e">offsetBytes</span> <span style="color:#f92672">*</span> <span style="color:#ae81ff">2</span> <span style="color:#f92672">+</span> <span style="color:#a6e22e">sizeBytes</span> <span style="color:#f92672">*</span> <span style="color:#ae81ff">2</span>).<span style="color:#a6e22e">match</span>(<span style="color:#e6db74">/../g</span>).<span style="color:#a6e22e">reverse</span>().<span style="color:#a6e22e">join</span>(<span style="color:#e6db74">&#39;&#39;</span>);
+</span></span><span style="display:flex;"><span>        },
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">splitStringByLength</span><span style="color:#f92672">:</span> (<span style="color:#a6e22e">str</span>, <span style="color:#a6e22e">lengthBytes</span>) =&gt; {
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">const</span> <span style="color:#a6e22e">length</span> <span style="color:#f92672">=</span> <span style="color:#a6e22e">lengthBytes</span> <span style="color:#f92672">*</span> <span style="color:#ae81ff">2</span>;
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">return</span> Array.<span style="color:#a6e22e">from</span>(
+</span></span><span style="display:flex;"><span>                { <span style="color:#a6e22e">length</span><span style="color:#f92672">:</span> Math.<span style="color:#a6e22e">ceil</span>(<span style="color:#a6e22e">str</span>.<span style="color:#a6e22e">length</span> <span style="color:#f92672">/</span> <span style="color:#a6e22e">length</span>) }, 
+</span></span><span style="display:flex;"><span>                (<span style="color:#a6e22e">v</span>, <span style="color:#a6e22e">i</span>) =&gt; <span style="color:#a6e22e">str</span>.<span style="color:#a6e22e">slice</span>(<span style="color:#a6e22e">i</span> <span style="color:#f92672">*</span> <span style="color:#a6e22e">length</span>, <span style="color:#a6e22e">i</span> <span style="color:#f92672">*</span> <span style="color:#a6e22e">length</span> <span style="color:#f92672">+</span> <span style="color:#a6e22e">length</span>)
+</span></span><span style="display:flex;"><span>            );
+</span></span><span style="display:flex;"><span>        },
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">replaceAt</span><span style="color:#f92672">:</span> (<span style="color:#a6e22e">str</span>, <span style="color:#a6e22e">indexBytes</span>, <span style="color:#a6e22e">lengthBytes</span>, <span style="color:#a6e22e">replacement</span>) =&gt; {
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">return</span> <span style="color:#a6e22e">str</span>.<span style="color:#a6e22e">slice</span>(<span style="color:#ae81ff">0</span>, <span style="color:#a6e22e">indexBytes</span> <span style="color:#f92672">*</span> <span style="color:#ae81ff">2</span>) <span style="color:#f92672">+</span> <span style="color:#a6e22e">replacement</span> <span style="color:#f92672">+</span> <span style="color:#a6e22e">str</span>.<span style="color:#a6e22e">slice</span>((<span style="color:#a6e22e">indexBytes</span> <span style="color:#f92672">+</span> <span style="color:#a6e22e">lengthBytes</span>) <span style="color:#f92672">*</span> <span style="color:#ae81ff">2</span>);
+</span></span><span style="display:flex;"><span>        }
+</span></span><span style="display:flex;"><span>    };
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">const</span> <span style="color:#a6e22e">cnt</span> <span style="color:#f92672">=</span> <span style="color:#a6e22e">FS</span>.<span style="color:#a6e22e">readFileSync</span>(<span style="color:#e6db74">&#39;./1.o&#39;</span>).<span style="color:#a6e22e">toString</span>(<span style="color:#e6db74">&#39;hex&#39;</span>);
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">if</span> (<span style="color:#a6e22e">cnt</span>.<span style="color:#a6e22e">slice</span>(<span style="color:#ae81ff">0</span>, <span style="color:#ae81ff">8</span>) <span style="color:#f92672">!==</span> <span style="color:#e6db74">&#39;7f454c46&#39;</span>) {
+</span></span><span style="display:flex;"><span>  <span style="color:#66d9ef">throw</span> <span style="color:#66d9ef">new</span> Error(<span style="color:#e6db74">&#39;not elf file&#39;</span>);
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">let</span> <span style="color:#a6e22e">cntColored</span> <span style="color:#f92672">=</span> <span style="color:#a6e22e">cnt</span>.<span style="color:#a6e22e">slice</span>();
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// header
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">const</span> <span style="color:#a6e22e">headerSize</span> <span style="color:#f92672">=</span> parseInt(<span style="color:#a6e22e">TOOLS</span>.<span style="color:#a6e22e">readLE</span>(<span style="color:#a6e22e">cnt</span>, <span style="color:#ae81ff">0x28</span>, <span style="color:#ae81ff">2</span>), <span style="color:#ae81ff">16</span>);
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">const</span> <span style="color:#a6e22e">header</span> <span style="color:#f92672">=</span> <span style="color:#a6e22e">TOOLS</span>.<span style="color:#a6e22e">read</span>(<span style="color:#a6e22e">cnt</span>, <span style="color:#ae81ff">0</span>, <span style="color:#a6e22e">headerSize</span>);
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">cntColored</span> <span style="color:#f92672">=</span> <span style="color:#a6e22e">TOOLS</span>.<span style="color:#a6e22e">replaceAt</span>(<span style="color:#a6e22e">cntColored</span>, <span style="color:#ae81ff">0</span>, <span style="color:#a6e22e">headerSize</span>, <span style="color:#e6db74">&#39;G&#39;</span>.<span style="color:#a6e22e">repeat</span>(<span style="color:#a6e22e">headerSize</span> <span style="color:#f92672">*</span> <span style="color:#ae81ff">2</span>));
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// sections，sht=section header table
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">const</span> <span style="color:#a6e22e">shtOff</span> <span style="color:#f92672">=</span> parseInt(<span style="color:#a6e22e">TOOLS</span>.<span style="color:#a6e22e">readLE</span>(<span style="color:#a6e22e">cnt</span>, <span style="color:#ae81ff">0x20</span>, <span style="color:#ae81ff">4</span>), <span style="color:#ae81ff">16</span>),
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">shtEntrySize</span> <span style="color:#f92672">=</span> parseInt(<span style="color:#a6e22e">TOOLS</span>.<span style="color:#a6e22e">readLE</span>(<span style="color:#a6e22e">cnt</span>, <span style="color:#ae81ff">0x2E</span>, <span style="color:#ae81ff">2</span>), <span style="color:#ae81ff">16</span>),
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">shtEntryNum</span> <span style="color:#f92672">=</span> parseInt(<span style="color:#a6e22e">TOOLS</span>.<span style="color:#a6e22e">readLE</span>(<span style="color:#a6e22e">cnt</span>, <span style="color:#ae81ff">0x30</span>, <span style="color:#ae81ff">2</span>), <span style="color:#ae81ff">16</span>),
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">shtStringTableIndex</span> <span style="color:#f92672">=</span> parseInt(<span style="color:#a6e22e">TOOLS</span>.<span style="color:#a6e22e">readLE</span>(<span style="color:#a6e22e">cnt</span>, <span style="color:#ae81ff">0x32</span>, <span style="color:#ae81ff">2</span>), <span style="color:#ae81ff">16</span>);
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">const</span> <span style="color:#a6e22e">sht</span> <span style="color:#f92672">=</span> <span style="color:#a6e22e">cnt</span>.<span style="color:#a6e22e">slice</span>(<span style="color:#a6e22e">shtOff</span> <span style="color:#f92672">*</span> <span style="color:#ae81ff">2</span>, (<span style="color:#a6e22e">shtOff</span> <span style="color:#f92672">+</span> <span style="color:#a6e22e">shtEntrySize</span> <span style="color:#f92672">*</span> <span style="color:#a6e22e">shtEntryNum</span>) <span style="color:#f92672">*</span> <span style="color:#ae81ff">2</span>);
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">const</span> <span style="color:#a6e22e">shtArr</span> <span style="color:#f92672">=</span> <span style="color:#a6e22e">TOOLS</span>.<span style="color:#a6e22e">splitStringByLength</span>(<span style="color:#a6e22e">sht</span>, <span style="color:#a6e22e">shtEntrySize</span>);
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">cntColored</span> <span style="color:#f92672">=</span> <span style="color:#a6e22e">TOOLS</span>.<span style="color:#a6e22e">replaceAt</span>(<span style="color:#a6e22e">cntColored</span>, <span style="color:#a6e22e">shtOff</span>, <span style="color:#a6e22e">shtEntrySize</span> <span style="color:#f92672">*</span> <span style="color:#a6e22e">shtEntryNum</span>, <span style="color:#e6db74">&#39;H&#39;</span>.<span style="color:#a6e22e">repeat</span>(<span style="color:#a6e22e">shtEntrySize</span> <span style="color:#f92672">*</span> <span style="color:#a6e22e">shtEntryNum</span> <span style="color:#f92672">*</span> <span style="color:#ae81ff">2</span>));
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">shtArr</span>.<span style="color:#a6e22e">forEach</span>((<span style="color:#a6e22e">section</span>, <span style="color:#a6e22e">index</span>) =&gt; {
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">const</span> <span style="color:#a6e22e">shOffset</span> <span style="color:#f92672">=</span> parseInt(<span style="color:#a6e22e">TOOLS</span>.<span style="color:#a6e22e">readLE</span>(<span style="color:#a6e22e">section</span>, <span style="color:#ae81ff">0x10</span>, <span style="color:#ae81ff">4</span>), <span style="color:#ae81ff">16</span>),
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">shSize</span> <span style="color:#f92672">=</span> parseInt(<span style="color:#a6e22e">TOOLS</span>.<span style="color:#a6e22e">readLE</span>(<span style="color:#a6e22e">section</span>, <span style="color:#ae81ff">0x14</span>, <span style="color:#ae81ff">4</span>), <span style="color:#ae81ff">16</span>);
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> (<span style="color:#a6e22e">shSize</span> <span style="color:#f92672">===</span> <span style="color:#ae81ff">0</span>) <span style="color:#66d9ef">return</span>;
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">cntColored</span> <span style="color:#f92672">=</span> <span style="color:#a6e22e">TOOLS</span>.<span style="color:#a6e22e">replaceAt</span>(<span style="color:#a6e22e">cntColored</span>, <span style="color:#a6e22e">shOffset</span>, <span style="color:#a6e22e">shSize</span>, String.<span style="color:#a6e22e">fromCharCode</span>(<span style="color:#e6db74">&#39;I&#39;</span>.<span style="color:#a6e22e">charCodeAt</span>(<span style="color:#ae81ff">0</span>) <span style="color:#f92672">+</span> <span style="color:#a6e22e">index</span>).<span style="color:#a6e22e">repeat</span>(<span style="color:#a6e22e">shSize</span> <span style="color:#f92672">*</span> <span style="color:#ae81ff">2</span>));
+</span></span><span style="display:flex;"><span>});
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// replace with color
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#a6e22e">cntColored</span> <span style="color:#f92672">=</span> <span style="color:#a6e22e">cntColored</span>.<span style="color:#a6e22e">replace</span>(<span style="color:#e6db74">/GG+/g</span>, <span style="color:#e6db74">&#39;\x1b[36m&#39;</span> <span style="color:#f92672">+</span> <span style="color:#a6e22e">header</span> <span style="color:#f92672">+</span> <span style="color:#e6db74">&#39;\x1b[0m&#39;</span>); <span style="color:#75715e">// cyan
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#a6e22e">cntColored</span> <span style="color:#f92672">=</span> <span style="color:#a6e22e">cntColored</span>.<span style="color:#a6e22e">replace</span>(<span style="color:#e6db74">/HH+/g</span>, <span style="color:#e6db74">&#39;\x1b[32m&#39;</span> <span style="color:#f92672">+</span> <span style="color:#a6e22e">sht</span> <span style="color:#f92672">+</span> <span style="color:#e6db74">&#39;\x1b[0m&#39;</span>); <span style="color:#75715e">// green
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#a6e22e">shtArr</span>.<span style="color:#a6e22e">forEach</span>((<span style="color:#a6e22e">section</span>, <span style="color:#a6e22e">index</span>) =&gt; {
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">const</span> <span style="color:#a6e22e">shOffset</span> <span style="color:#f92672">=</span> parseInt(<span style="color:#a6e22e">TOOLS</span>.<span style="color:#a6e22e">readLE</span>(<span style="color:#a6e22e">section</span>, <span style="color:#ae81ff">0x10</span>, <span style="color:#ae81ff">4</span>), <span style="color:#ae81ff">16</span>),
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">shSize</span> <span style="color:#f92672">=</span> parseInt(<span style="color:#a6e22e">TOOLS</span>.<span style="color:#a6e22e">readLE</span>(<span style="color:#a6e22e">section</span>, <span style="color:#ae81ff">0x14</span>, <span style="color:#ae81ff">4</span>), <span style="color:#ae81ff">16</span>);
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> (<span style="color:#a6e22e">shSize</span> <span style="color:#f92672">===</span> <span style="color:#ae81ff">0</span>) <span style="color:#66d9ef">return</span>;
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">cntColored</span> <span style="color:#f92672">=</span> <span style="color:#a6e22e">cntColored</span>.<span style="color:#a6e22e">replace</span>(String.<span style="color:#a6e22e">fromCharCode</span>(<span style="color:#e6db74">&#39;I&#39;</span>.<span style="color:#a6e22e">charCodeAt</span>(<span style="color:#ae81ff">0</span>) <span style="color:#f92672">+</span> <span style="color:#a6e22e">index</span>).<span style="color:#a6e22e">repeat</span>(<span style="color:#a6e22e">shSize</span> <span style="color:#f92672">*</span> <span style="color:#ae81ff">2</span>), 
+</span></span><span style="display:flex;"><span>        <span style="color:#e6db74">&#39;\x1b[35m&#39;</span> <span style="color:#f92672">+</span> <span style="color:#a6e22e">TOOLS</span>.<span style="color:#a6e22e">read</span>(<span style="color:#a6e22e">cnt</span>, <span style="color:#a6e22e">shOffset</span>, <span style="color:#a6e22e">shSize</span>) <span style="color:#f92672">+</span> <span style="color:#e6db74">&#39;\x1b[0m&#39;</span>);
+</span></span><span style="display:flex;"><span>});
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">console</span>.<span style="color:#a6e22e">log</span>(<span style="color:#a6e22e">cnt</span>);
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">console</span>.<span style="color:#a6e22e">log</span>(<span style="color:#a6e22e">cntColored</span>);
+</span></span></code></pre></div><p>TODO</p>
+
+</main>
+
+  <footer>
+  
+  
+  </footer>
+  </body>
+</html>
+
