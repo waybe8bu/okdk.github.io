@@ -53,7 +53,7 @@
 </span></span><span style="display:flex;"><span>}
 </span></span></code></pre></div><p>简单起见编译到 x86 arch，mac homebrew 安装 <code>i686-elf-gcc</code>/<code>i686-elf-binutils</code> 两个，编译：</p>
 <pre tabindex="0"><code>/opt/homebrew/bin/i686-elf-gcc -c 1.c
-</code></pre><p>手搓个 js 直观感受下字节码内部结构的相对位置：</p>
+</code></pre><p>手搓个 js 感受下字节码内部结构的相对位置：</p>
 <div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-js" data-lang="js"><span style="display:flex;"><span><span style="color:#66d9ef">const</span> <span style="color:#a6e22e">FS</span> <span style="color:#f92672">=</span> <span style="color:#a6e22e">require</span>(<span style="color:#e6db74">&#39;node:fs&#39;</span>),
 </span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">TOOLS</span> <span style="color:#f92672">=</span> {
 </span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">read</span><span style="color:#f92672">:</span> (<span style="color:#a6e22e">hex</span>, <span style="color:#a6e22e">offsetBytes</span>, <span style="color:#a6e22e">sizeBytes</span>) =&gt; {
@@ -112,7 +112,10 @@
 </span></span><span style="display:flex;"><span>});
 </span></span><span style="display:flex;"><span><span style="color:#a6e22e">console</span>.<span style="color:#a6e22e">log</span>(<span style="color:#a6e22e">cnt</span>);
 </span></span><span style="display:flex;"><span><span style="color:#a6e22e">console</span>.<span style="color:#a6e22e">log</span>(<span style="color:#a6e22e">cntColored</span>);
-</span></span></code></pre></div><p><img src="/images/1758091659979.png" alt=""></p>
+</span></span></code></pre></div><p>蓝色为头，绿色是 section header table，紫色是所有的 sections（不同的段没有用颜色区分，因为数据段和只读数据段有重叠）：</p>
+<p><img src="/images/1758091659979.png" alt=""></p>
+<p>主要目的是有个直观的感受，可以看到其实也很简单，除了对齐需要导致的几个字节的浪费，基本利用率也很高。</p>
+<p>结构可以去 linux 自带的头文件里找 struct，也可以直接在 <a href="https://en.wikipedia.org/wiki/Executable_and_Linkable_Format">Executable and Linkable Format</a> 对照。</p>
 <p>TODO</p>
 
 </main>

@@ -36,7 +36,7 @@ int main(void)
 /opt/homebrew/bin/i686-elf-gcc -c 1.c
 ```
 
-手搓个 js 直观感受下字节码内部结构的相对位置：
+手搓个 js 感受下字节码内部结构的相对位置：
 
 ```js
 const FS = require('node:fs'),
@@ -99,6 +99,12 @@ console.log(cnt);
 console.log(cntColored);
 ```
 
+蓝色为头，绿色是 section header table，紫色是所有的 sections（不同的段没有用颜色区分，因为数据段和只读数据段有重叠）：
+
 ![](/images/1758091659979.png)
+
+主要目的是有个直观的感受，可以看到其实也很简单，除了对齐需要导致的几个字节的浪费，基本利用率也很高。
+
+结构可以去 linux 自带的头文件里找 struct，也可以直接在 [Executable and Linkable Format](https://en.wikipedia.org/wiki/Executable_and_Linkable_Format) 对照。
 
 TODO
