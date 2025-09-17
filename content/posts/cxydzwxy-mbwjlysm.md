@@ -99,4 +99,6 @@ console.log(cnt);
 console.log(cntColored);
 ```
 
+![](/images/1758091659979.png)
+
 TODO
