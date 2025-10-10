@@ -1,0 +1,756 @@
+<!DOCTYPE html>
+<html lang="en-us">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>OpenMir2 怪物系统技术分析 | okie dokie</title>
+    <link rel="stylesheet" href="/css/style.css" />
+    <link rel="stylesheet" href="/css/fonts.css" />
+    
+  </head>
+
+  <body>
+    <nav>
+    <ul class="menu">
+      
+      <li><a href="/">Home</a></li>
+      
+      <li><a href="/posts">All posts</a></li>
+      
+    </ul>
+    <hr/>
+    </nav>
+
+<div class="article-meta">
+<h1><span class="title">OpenMir2 怪物系统技术分析</span></h1>
+
+<h2 class="date">2024/01/12</h2>
+</div>
+
+<main>
+<p><a href="https://github.com/mirbeta/OpenMir2">https://github.com/mirbeta/OpenMir2</a></p>
+<p>OpenMir2是传奇游戏的开源C#服务器实现，本文分析其怪物AOI(Area of Interest)、寻路算法和数据同步机制的实现。</p>
+<h2 id="1-怪物aoi系统实现">1. 怪物AOI系统实现</h2>
+<h3 id="11-视野范围机制">1.1 视野范围机制</h3>
+<p>每个怪物都有一个<code>ViewRange</code>属性，定义其感知范围：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-csharp" data-lang="csharp"><span style="display:flex;"><span><span style="color:#75715e">// BaseObject.cs</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">public</span> <span style="color:#66d9ef">byte</span> ViewRange { <span style="color:#66d9ef">get</span>; <span style="color:#66d9ef">set</span>; }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// 不同怪物类型的视野范围</span>
+</span></span><span style="display:flex;"><span>DigOutZombi: ViewRange = <span style="color:#ae81ff">7</span>;
+</span></span><span style="display:flex;"><span>PercentMonster: ViewRange = <span style="color:#ae81ff">5</span>;
+</span></span><span style="display:flex;"><span>MagicMonster: ViewRange = <span style="color:#ae81ff">8</span>;
+</span></span><span style="display:flex;"><span>CentipedeKingMonster: ViewRange = <span style="color:#ae81ff">6</span>;
+</span></span><span style="display:flex;"><span>SpiderHouseMonster: ViewRange = <span style="color:#ae81ff">9</span>;
+</span></span></code></pre></div><h3 id="12-aoi检测机制">1.2 AOI检测机制</h3>
+<p>怪物通过Grid-based的地图单元系统检测周围对象：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-csharp" data-lang="csharp"><span style="display:flex;"><span><span style="color:#75715e">// WorldServer.MonGen.cs - ProcessMonsters方法</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">private</span> <span style="color:#66d9ef">void</span> ProcessMonsters(MonsterThread monsterThread)
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// 守卫和下属主动搜索附近的精灵</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> (monster.IsSlave || (monster.Race <span style="color:#66d9ef">is</span> ActorRace.Guard or ActorRace.ArcherGuard or ActorRace.SlaveMonster))
+</span></span><span style="display:flex;"><span>    {
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> ((currentTick - monster.SearchTick) &gt; monster.SearchTime)
+</span></span><span style="display:flex;"><span>        {
+</span></span><span style="display:flex;"><span>            monster.SearchTick = HUtil32.GetTickCount();
+</span></span><span style="display:flex;"><span>            <span style="color:#75715e">// 执行视野范围内的目标搜索</span>
+</span></span><span style="display:flex;"><span>        }
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><h3 id="13-视野范围计算">1.3 视野范围计算</h3>
+<p>实际的视野检测使用曼哈顿距离：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-csharp" data-lang="csharp"><span style="display:flex;"><span><span style="color:#75715e">// CentipedeKingMonster.cs 示例</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">if</span> (Math.Abs(CurrX - baseObject.CurrX) &lt;= ViewRange &amp;&amp; 
+</span></span><span style="display:flex;"><span>    Math.Abs(CurrY - baseObject.CurrY) &lt;= ViewRange)
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// 目标在视野范围内</span>
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><h3 id="14-map-cell系统">1.4 Map Cell系统</h3>
+<p>游戏使用Grid-based的地图单元系统优化性能：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-csharp" data-lang="csharp"><span style="display:flex;"><span><span style="color:#75715e">// BaseObject.Message.cs - SendRefMsg方法</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">public</span> <span style="color:#66d9ef">void</span> SendRefMsg(<span style="color:#66d9ef">int</span> wIdent, <span style="color:#66d9ef">int</span> wParam, <span style="color:#66d9ef">int</span> nParam1, <span style="color:#66d9ef">int</span> nParam2, <span style="color:#66d9ef">int</span> nParam3, <span style="color:#66d9ef">string</span> sMsg)
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">short</span> nLx = (<span style="color:#66d9ef">short</span>)(CurrX - SystemShare.Config.SendRefMsgRange); <span style="color:#75715e">// 12</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">short</span> nHx = (<span style="color:#66d9ef">short</span>)(CurrX + SystemShare.Config.SendRefMsgRange); <span style="color:#75715e">// 12</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">short</span> nLy = (<span style="color:#66d9ef">short</span>)(CurrY - SystemShare.Config.SendRefMsgRange); <span style="color:#75715e">// 12</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">short</span> nHy = (<span style="color:#66d9ef">short</span>)(CurrY + SystemShare.Config.SendRefMsgRange); <span style="color:#75715e">// 12</span>
+</span></span><span style="display:flex;"><span>    
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">for</span> (<span style="color:#66d9ef">short</span> nCx = nLx; nCx &lt;= nHx; nCx++)
+</span></span><span style="display:flex;"><span>    {
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">for</span> (<span style="color:#66d9ef">short</span> nCy = nLy; nCy &lt;= nHy; nCy++)
+</span></span><span style="display:flex;"><span>        {
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">if</span> (!Envir.CellMatch(nCx, nCy)) <span style="color:#66d9ef">continue</span>;
+</span></span><span style="display:flex;"><span>            
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">ref</span> MapCellInfo cellInfo = <span style="color:#66d9ef">ref</span> Envir.GetCellInfo(nCx, nCy, <span style="color:#66d9ef">out</span> <span style="color:#66d9ef">bool</span> cellSuccess);
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">if</span> (cellSuccess &amp;&amp; cellInfo.IsAvailable)
+</span></span><span style="display:flex;"><span>            {
+</span></span><span style="display:flex;"><span>                <span style="color:#66d9ef">for</span> (<span style="color:#66d9ef">int</span> i = <span style="color:#ae81ff">0</span>; i &lt; cellInfo.ObjList.Count; i++)
+</span></span><span style="display:flex;"><span>                {
+</span></span><span style="display:flex;"><span>                    CellObject cellObject = cellInfo.ObjList[i];
+</span></span><span style="display:flex;"><span>                    <span style="color:#66d9ef">if</span> (cellObject.ActorObject)
+</span></span><span style="display:flex;"><span>                    {
+</span></span><span style="display:flex;"><span>                        IActor targetObject = SystemShare.ActorMgr.Get(cellObject.CellObjId);
+</span></span><span style="display:flex;"><span>                        <span style="color:#75715e">// 处理视野内的对象</span>
+</span></span><span style="display:flex;"><span>                    }
+</span></span><span style="display:flex;"><span>                }
+</span></span><span style="display:flex;"><span>            }
+</span></span><span style="display:flex;"><span>        }
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><h2 id="2-寻路系统实现">2. 寻路系统实现</h2>
+<h3 id="21-寻路架构">2.1 寻路架构</h3>
+<p>OpenMir2使用A*算法的变种实现寻路：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-csharp" data-lang="csharp"><span style="display:flex;"><span><span style="color:#75715e">// FindPath.cs - 核心寻路类</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">public</span> <span style="color:#66d9ef">class</span> <span style="color:#a6e22e">FindPath</span> : PathMap
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">public</span> PointInfo[] Path { <span style="color:#66d9ef">get</span>; <span style="color:#66d9ef">set</span>; }
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">private</span> PointInfo[] _path;
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">private</span> IEnvirnoment _pathEnvir;
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">public</span> <span style="color:#66d9ef">short</span> BeginX, BeginY, EndX, EndY;
+</span></span><span style="display:flex;"><span>    
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">public</span> PointInfo[] Find(IEnvirnoment envir, <span style="color:#66d9ef">short</span> startX, <span style="color:#66d9ef">short</span> startY, 
+</span></span><span style="display:flex;"><span>                           <span style="color:#66d9ef">short</span> stopX, <span style="color:#66d9ef">short</span> stopY, <span style="color:#66d9ef">bool</span> run)
+</span></span><span style="display:flex;"><span>    {
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">this</span>.Width = envir.Width;
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">this</span>.Height = envir.Height;
+</span></span><span style="display:flex;"><span>        BeginX = startX; BeginY = startY;
+</span></span><span style="display:flex;"><span>        EndX = stopX; EndY = stopY;
+</span></span><span style="display:flex;"><span>        _path = <span style="color:#66d9ef">null</span>;
+</span></span><span style="display:flex;"><span>        _pathEnvir = envir;
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">this</span>.StartFind = <span style="color:#66d9ef">true</span>;
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">this</span>.PathMapArray = <span style="color:#66d9ef">this</span>.FillPathMap(startX, startY, stopX, stopY);
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">return</span> <span style="color:#66d9ef">this</span>.FindPathOnMap(stopX, stopY, run);
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><h3 id="22-路径成本计算">2.2 路径成本计算</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-csharp" data-lang="csharp"><span style="display:flex;"><span><span style="color:#75715e">// FindPath.cs - GetCost方法</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">public</span> <span style="color:#66d9ef">int</span> GetCost(<span style="color:#66d9ef">short</span> x, <span style="color:#66d9ef">short</span> y, <span style="color:#66d9ef">int</span> direction)
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">int</span> result;
+</span></span><span style="display:flex;"><span>    direction = direction &amp; <span style="color:#ae81ff">7</span>;
+</span></span><span style="display:flex;"><span>    
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> ((x &lt; <span style="color:#ae81ff">0</span>) || (x &gt;= <span style="color:#66d9ef">this</span>.ClientRect.Right - <span style="color:#66d9ef">this</span>.ClientRect.Left) || 
+</span></span><span style="display:flex;"><span>        (y &lt; <span style="color:#ae81ff">0</span>) || (y &gt;= <span style="color:#66d9ef">this</span>.ClientRect.Bottom - <span style="color:#66d9ef">this</span>.ClientRect.Top))
+</span></span><span style="display:flex;"><span>    {
+</span></span><span style="display:flex;"><span>        result = -<span style="color:#ae81ff">1</span>;
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">else</span>
+</span></span><span style="display:flex;"><span>    {
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">int</span> nX = <span style="color:#66d9ef">this</span>.MapX(x);
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">int</span> nY = <span style="color:#66d9ef">this</span>.MapY(y);
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> (_pathEnvir.CanWalkEx(nX, nY, <span style="color:#66d9ef">false</span>))
+</span></span><span style="display:flex;"><span>        {
+</span></span><span style="display:flex;"><span>            result = <span style="color:#ae81ff">4</span>; <span style="color:#75715e">// 基础移动成本</span>
+</span></span><span style="display:flex;"><span>        }
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">else</span>
+</span></span><span style="display:flex;"><span>        {
+</span></span><span style="display:flex;"><span>            result = -<span style="color:#ae81ff">1</span>; <span style="color:#75715e">// 无法通行</span>
+</span></span><span style="display:flex;"><span>        }
+</span></span><span style="display:flex;"><span>        
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e">// 如果是斜方向，则COST增加</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> (((direction &amp; <span style="color:#ae81ff">1</span>) == <span style="color:#ae81ff">1</span>) &amp;&amp; (result &gt; <span style="color:#ae81ff">0</span>))
+</span></span><span style="display:flex;"><span>        {
+</span></span><span style="display:flex;"><span>            result = result + (result &gt;&gt; <span style="color:#ae81ff">1</span>); <span style="color:#75715e">// 应为 Result * sqrt(2)，此处近似为1.5</span>
+</span></span><span style="display:flex;"><span>        }
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> result;
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><h3 id="23-路径优化">2.3 路径优化</h3>
+<p>系统支持将走路路径转换为跑步路径：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-csharp" data-lang="csharp"><span style="display:flex;"><span><span style="color:#75715e">// PathMap.cs - WalkToRun方法</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">private</span> PointInfo[] WalkToRun(PointInfo[] path)
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>    PointInfo[] walkPath = path;
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// 优化路径，去除不必要的中间点</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">for</span> (<span style="color:#66d9ef">int</span> I = <span style="color:#ae81ff">2</span>; I &lt; walkPath.Length; I++)
+</span></span><span style="display:flex;"><span>    {
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">int</span> nDir1 = WalkToRunGetNextDirection(walkPath[I - <span style="color:#ae81ff">2</span>].nX, walkPath[I - <span style="color:#ae81ff">2</span>].nX, 
+</span></span><span style="display:flex;"><span>                                             walkPath[I - <span style="color:#ae81ff">1</span>].nX, walkPath[I - <span style="color:#ae81ff">1</span>].nX);
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">int</span> nDir2 = WalkToRunGetNextDirection(walkPath[I - <span style="color:#ae81ff">1</span>].nX, walkPath[I - <span style="color:#ae81ff">1</span>].nX, 
+</span></span><span style="display:flex;"><span>                                             walkPath[I].nX, walkPath[I].nX);
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> (nDir1 == nDir2)
+</span></span><span style="display:flex;"><span>        {
+</span></span><span style="display:flex;"><span>            walkPath[I - <span style="color:#ae81ff">1</span>].nX = -<span style="color:#ae81ff">1</span>; <span style="color:#75715e">// 标记为删除</span>
+</span></span><span style="display:flex;"><span>            walkPath[I - <span style="color:#ae81ff">1</span>].nX = -<span style="color:#ae81ff">1</span>;
+</span></span><span style="display:flex;"><span>        }
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// 构建最终路径</span>
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><h3 id="24-怪物移动逻辑">2.4 怪物移动逻辑</h3>
+<p>怪物支持多种移动模式：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-csharp" data-lang="csharp"><span style="display:flex;"><span><span style="color:#75715e">// MonsterObject.cs - 怪物移动属性</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">public</span> <span style="color:#66d9ef">ushort</span> WalkSpeed { <span style="color:#66d9ef">get</span>; <span style="color:#66d9ef">set</span>; }    <span style="color:#75715e">// 走路速度</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">public</span> <span style="color:#66d9ef">ushort</span> WalkStep { <span style="color:#66d9ef">get</span>; <span style="color:#66d9ef">set</span>; }     <span style="color:#75715e">// 走路步长</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">public</span> <span style="color:#66d9ef">ushort</span> WalkWait { <span style="color:#66d9ef">get</span>; <span style="color:#66d9ef">set</span>; }     <span style="color:#75715e">// 走路等待时间</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">public</span> <span style="color:#66d9ef">ushort</span> AttackSpeed { <span style="color:#66d9ef">get</span>; <span style="color:#66d9ef">set</span>; }  <span style="color:#75715e">// 攻击速度</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// 远程攻击方向计算</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">protected</span> <span style="color:#66d9ef">bool</span> GetLongAttackDirDis(IActor baseObject, <span style="color:#66d9ef">int</span> dis, <span style="color:#66d9ef">ref</span> <span style="color:#66d9ef">byte</span> dir)
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// 计算到目标的攻击方向</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> (CurrX - nC &lt;= baseObject.CurrX &amp;&amp; (CurrX + nC &gt;= baseObject.CurrX) &amp;&amp; 
+</span></span><span style="display:flex;"><span>        (CurrY - nC &lt;= baseObject.CurrY) &amp;&amp; (CurrY + nC &gt;= baseObject.CurrY))
+</span></span><span style="display:flex;"><span>    {
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e">// 八个方向的判断逻辑</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> ((CurrX - nC == baseObject.CurrX) &amp;&amp; (CurrY == baseObject.CurrY))
+</span></span><span style="display:flex;"><span>        {
+</span></span><span style="display:flex;"><span>            dir = Direction.Left;
+</span></span><span style="display:flex;"><span>            result = <span style="color:#66d9ef">true</span>;
+</span></span><span style="display:flex;"><span>        }
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e">// ... 其他方向</span>
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><h2 id="3-数据同步机制">3. 数据同步机制</h2>
+<h3 id="31-消息系统架构">3.1 消息系统架构</h3>
+<p>OpenMir2使用基于消息队列的异步通信：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-csharp" data-lang="csharp"><span style="display:flex;"><span><span style="color:#75715e">// BaseObject.Message.cs - 消息处理核心</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">public</span> <span style="color:#66d9ef">void</span> SendMsg(<span style="color:#66d9ef">int</span> wIdent, <span style="color:#66d9ef">int</span> wParam, <span style="color:#66d9ef">int</span> lParam1, <span style="color:#66d9ef">int</span> lParam2, <span style="color:#66d9ef">int</span> lParam3, <span style="color:#66d9ef">string</span> sMsg)
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>    SendMessage sendMessage = <span style="color:#66d9ef">new</span> SendMessage
+</span></span><span style="display:flex;"><span>    {
+</span></span><span style="display:flex;"><span>        wIdent = wIdent,
+</span></span><span style="display:flex;"><span>        wParam = wParam,
+</span></span><span style="display:flex;"><span>        nParam1 = lParam1,
+</span></span><span style="display:flex;"><span>        nParam2 = lParam2,
+</span></span><span style="display:flex;"><span>        nParam3 = lParam3,
+</span></span><span style="display:flex;"><span>        ActorId = ActorId,
+</span></span><span style="display:flex;"><span>        Buff = sMsg
+</span></span><span style="display:flex;"><span>    };
+</span></span><span style="display:flex;"><span>    MsgQueue.Enqueue(sendMessage, (<span style="color:#66d9ef">byte</span>)MessagePriority.Normal);
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><h3 id="32-广播消息机制">3.2 广播消息机制</h3>
+<p><code>SendRefMsg</code>是核心的AOI广播机制：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-csharp" data-lang="csharp"><span style="display:flex;"><span><span style="color:#66d9ef">public</span> <span style="color:#66d9ef">void</span> SendRefMsg(<span style="color:#66d9ef">int</span> wIdent, <span style="color:#66d9ef">int</span> wParam, <span style="color:#66d9ef">int</span> nParam1, <span style="color:#66d9ef">int</span> nParam2, <span style="color:#66d9ef">int</span> nParam3, <span style="color:#66d9ef">string</span> sMsg)
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> (Envir == <span style="color:#66d9ef">null</span>) <span style="color:#66d9ef">return</span>;
+</span></span><span style="display:flex;"><span>    
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> (ObMode || FixedHideMode)
+</span></span><span style="display:flex;"><span>    {
+</span></span><span style="display:flex;"><span>        SendMsg(wIdent, wParam, nParam1, nParam2, nParam3, sMsg); <span style="color:#75715e">// 隐身模式只发给自己</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">return</span>;
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>    
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// 每500ms更新一次可见对象列表</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> (((HUtil32.GetTickCount() - SendRefMsgTick) &gt;= <span style="color:#ae81ff">500</span>) || (VisibleHumanList.Count == <span style="color:#ae81ff">0</span>))
+</span></span><span style="display:flex;"><span>    {
+</span></span><span style="display:flex;"><span>        SendRefMsgTick = HUtil32.GetTickCount();
+</span></span><span style="display:flex;"><span>        VisibleHumanList.Clear();
+</span></span><span style="display:flex;"><span>        
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e">// 扫描周围12格范围内的所有对象</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">short</span> nLx = (<span style="color:#66d9ef">short</span>)(CurrX - SystemShare.Config.SendRefMsgRange); <span style="color:#75715e">// 12</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">short</span> nHx = (<span style="color:#66d9ef">short</span>)(CurrX + SystemShare.Config.SendRefMsgRange); <span style="color:#75715e">// 12</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">short</span> nLy = (<span style="color:#66d9ef">short</span>)(CurrY - SystemShare.Config.SendRefMsgRange); <span style="color:#75715e">// 12</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">short</span> nHy = (<span style="color:#66d9ef">short</span>)(CurrY + SystemShare.Config.SendRefMsgRange); <span style="color:#75715e">// 12</span>
+</span></span><span style="display:flex;"><span>        
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e">// 遍历范围内的所有Cell</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">for</span> (<span style="color:#66d9ef">short</span> nCx = nLx; nCx &lt;= nHx; nCx++)
+</span></span><span style="display:flex;"><span>        {
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">for</span> (<span style="color:#66d9ef">short</span> nCy = nLy; nCy &lt;= nHy; nCy++)
+</span></span><span style="display:flex;"><span>            {
+</span></span><span style="display:flex;"><span>                <span style="color:#66d9ef">ref</span> MapCellInfo cellInfo = <span style="color:#66d9ef">ref</span> Envir.GetCellInfo(nCx, nCy, <span style="color:#66d9ef">out</span> <span style="color:#66d9ef">bool</span> cellSuccess);
+</span></span><span style="display:flex;"><span>                <span style="color:#66d9ef">if</span> (cellSuccess &amp;&amp; cellInfo.IsAvailable)
+</span></span><span style="display:flex;"><span>                {
+</span></span><span style="display:flex;"><span>                    <span style="color:#75715e">// 遍历Cell内的所有对象</span>
+</span></span><span style="display:flex;"><span>                    <span style="color:#66d9ef">for</span> (<span style="color:#66d9ef">int</span> i = <span style="color:#ae81ff">0</span>; i &lt; cellInfo.ObjList.Count; i++)
+</span></span><span style="display:flex;"><span>                    {
+</span></span><span style="display:flex;"><span>                        IActor targetObject = SystemShare.ActorMgr.Get(cellObject.CellObjId);
+</span></span><span style="display:flex;"><span>                        <span style="color:#66d9ef">if</span> ((targetObject != <span style="color:#66d9ef">null</span>) &amp;&amp; !targetObject.Ghost)
+</span></span><span style="display:flex;"><span>                        {
+</span></span><span style="display:flex;"><span>                            <span style="color:#66d9ef">if</span> (targetObject.Race == ActorRace.Play)
+</span></span><span style="display:flex;"><span>                            {
+</span></span><span style="display:flex;"><span>                                targetObject.SendMsg(<span style="color:#66d9ef">this</span>, wIdent, wParam, nParam1, nParam2, nParam3, sMsg);
+</span></span><span style="display:flex;"><span>                                VisibleHumanList.Add(targetObject.ActorId);
+</span></span><span style="display:flex;"><span>                            }
+</span></span><span style="display:flex;"><span>                        }
+</span></span><span style="display:flex;"><span>                    }
+</span></span><span style="display:flex;"><span>                }
+</span></span><span style="display:flex;"><span>            }
+</span></span><span style="display:flex;"><span>        }
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">return</span>;
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>    
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// 使用缓存的可见对象列表进行快速广播</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">for</span> (<span style="color:#66d9ef">int</span> i = <span style="color:#ae81ff">0</span>; i &lt; VisibleHumanList.Count; i++)
+</span></span><span style="display:flex;"><span>    {
+</span></span><span style="display:flex;"><span>        IActor targetObject = SystemShare.ActorMgr.Get(VisibleHumanList[i]);
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> ((targetObject.Envir == Envir) &amp;&amp; 
+</span></span><span style="display:flex;"><span>            (Math.Abs(targetObject.CurrX - CurrX) &lt; <span style="color:#ae81ff">11</span>) &amp;&amp; 
+</span></span><span style="display:flex;"><span>            (Math.Abs(targetObject.CurrY - CurrY) &lt; <span style="color:#ae81ff">11</span>))
+</span></span><span style="display:flex;"><span>        {
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">if</span> (targetObject.Race == ActorRace.Play)
+</span></span><span style="display:flex;"><span>            {
+</span></span><span style="display:flex;"><span>                targetObject.SendMsg(<span style="color:#66d9ef">this</span>, wIdent, wParam, nParam1, nParam2, nParam3, sMsg);
+</span></span><span style="display:flex;"><span>            }
+</span></span><span style="display:flex;"><span>        }
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><h3 id="33-更新消息机制">3.3 更新消息机制</h3>
+<p><code>SendUpdateMsg</code>用于状态更新，避免消息队列中的重复操作：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-csharp" data-lang="csharp"><span style="display:flex;"><span><span style="color:#66d9ef">public</span> <span style="color:#66d9ef">void</span> SendUpdateMsg(<span style="color:#66d9ef">int</span> wIdent, <span style="color:#66d9ef">int</span> wParam, <span style="color:#66d9ef">int</span> lParam1, <span style="color:#66d9ef">int</span> lParam2, <span style="color:#66d9ef">int</span> lParam3, <span style="color:#66d9ef">string</span> sMsg)
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// 查找并更新队列中的同类消息</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">for</span> (<span style="color:#66d9ef">int</span> i = <span style="color:#ae81ff">0</span>; i &lt; MsgQueue.Count; i++)
+</span></span><span style="display:flex;"><span>    {
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> (MsgQueue.TryPeek(<span style="color:#66d9ef">out</span> SendMessage sendMessage, <span style="color:#66d9ef">out</span> _))
+</span></span><span style="display:flex;"><span>        {
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">if</span> (sendMessage.wIdent == wIdent)
+</span></span><span style="display:flex;"><span>            {
+</span></span><span style="display:flex;"><span>                MsgQueue.TryDequeue(<span style="color:#66d9ef">out</span> _, <span style="color:#66d9ef">out</span> _); <span style="color:#75715e">// 移除旧消息</span>
+</span></span><span style="display:flex;"><span>                Dispose(sendMessage);
+</span></span><span style="display:flex;"><span>            }
+</span></span><span style="display:flex;"><span>        }
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// 添加新消息</span>
+</span></span><span style="display:flex;"><span>    SendMsg(wIdent, wParam, lParam1, lParam2, lParam3, sMsg);
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><h3 id="34-玩家范围检测">3.4 玩家范围检测</h3>
+<p>系统提供高效的范围内玩家计数：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-csharp" data-lang="csharp"><span style="display:flex;"><span><span style="color:#75715e">// PlayObject.Base.cs</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">private</span> <span style="color:#66d9ef">int</span> GetRangeHumanCount()
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> SystemShare.WorldEngine.GetMapOfRangeHumanCount(Envir, CurrX, CurrY, <span style="color:#ae81ff">10</span>);
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// 使用示例</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">if</span> (GetRangeHumanCount() &gt;= <span style="color:#ae81ff">80</span>)
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// 当周围玩家过多时的处理逻辑</span>
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><h2 id="4-怪物ai线程管理">4. 怪物AI线程管理</h2>
+<h3 id="41-多线程怪物处理">4.1 多线程怪物处理</h3>
+<p>OpenMir2使用多线程处理怪物AI：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-csharp" data-lang="csharp"><span style="display:flex;"><span><span style="color:#75715e">// WorldServer.MonGen.cs</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">public</span> <span style="color:#66d9ef">void</span> InitializationMonsterThread()
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">int</span> monsterThreads = SystemShare.Config.ProcessMonsterMultiThreadLimit;
+</span></span><span style="display:flex;"><span>    MobThreads = <span style="color:#66d9ef">new</span> MonsterThread[monsterThreads];
+</span></span><span style="display:flex;"><span>    MobThreading = <span style="color:#66d9ef">new</span> Thread[monsterThreads];
+</span></span><span style="display:flex;"><span>    
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">for</span> (<span style="color:#66d9ef">byte</span> i = <span style="color:#ae81ff">0</span>; i &lt; monsterThreads; i++)
+</span></span><span style="display:flex;"><span>    {
+</span></span><span style="display:flex;"><span>        MobThreads[i] = <span style="color:#66d9ef">new</span> MonsterThread() { Id = i };
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>    
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">for</span> (<span style="color:#66d9ef">int</span> i = <span style="color:#ae81ff">0</span>; i &lt; monsterThreads; i++)
+</span></span><span style="display:flex;"><span>    {
+</span></span><span style="display:flex;"><span>        MonsterThread mobThread = MobThreads[i];
+</span></span><span style="display:flex;"><span>        MobThreading[i] = <span style="color:#66d9ef">new</span> Thread(() =&gt; ProcessMonsters(mobThread))
+</span></span><span style="display:flex;"><span>        {
+</span></span><span style="display:flex;"><span>            IsBackground = <span style="color:#66d9ef">true</span>
+</span></span><span style="display:flex;"><span>        };
+</span></span><span style="display:flex;"><span>        MobThreading[i].Start();
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><h3 id="42-怪物分配策略">4.2 怪物分配策略</h3>
+<p>怪物按线程ID随机分配：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-csharp" data-lang="csharp"><span style="display:flex;"><span><span style="color:#75715e">// 随机分配怪物到不同线程</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">for</span> (<span style="color:#66d9ef">int</span> i = <span style="color:#ae81ff">0</span>; i &lt; monsterNames.Length; i++)
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">int</span> threadId = M2Share.RandomNumber.Random(SystemShare.Config.ProcessMonsterMultiThreadLimit);
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">string</span> monName = monsterNames[i];
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> (MonGenInfoThreadMap.ContainsKey(threadId))
+</span></span><span style="display:flex;"><span>    {
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">for</span> (<span style="color:#66d9ef">int</span> j = <span style="color:#ae81ff">0</span>; j &lt; monsterGenMap[monName].Count; j++)
+</span></span><span style="display:flex;"><span>        {
+</span></span><span style="display:flex;"><span>            MonGenInfoThreadMap[threadId].Add(monsterGenMap[monName][j]);
+</span></span><span style="display:flex;"><span>        }
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><h3 id="43-怪物处理循环">4.3 怪物处理循环</h3>
+<p>每个线程独立处理分配给它的怪物：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-csharp" data-lang="csharp"><span style="display:flex;"><span><span style="color:#66d9ef">private</span> <span style="color:#66d9ef">void</span> ProcessMonsters(MonsterThread monsterThread)
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">while</span> (<span style="color:#66d9ef">true</span>)
+</span></span><span style="display:flex;"><span>    {
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e">// 刷新怪物</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> ((HUtil32.GetTickCount() - monsterThread.RegenMonstersTick) &gt; SystemShare.Config.RegenMonstersTime)
+</span></span><span style="display:flex;"><span>        {
+</span></span><span style="display:flex;"><span>            monsterThread.RegenMonstersTick = HUtil32.GetTickCount();
+</span></span><span style="display:flex;"><span>            <span style="color:#75715e">// 处理怪物重生</span>
+</span></span><span style="display:flex;"><span>        }
+</span></span><span style="display:flex;"><span>        
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e">// 处理怪物AI</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> (monGen.CertList.Count &gt; processPosition)
+</span></span><span style="display:flex;"><span>        {
+</span></span><span style="display:flex;"><span>            IMonsterActor monster = monGen.CertList[processPosition];
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">if</span> (monster != <span style="color:#66d9ef">null</span> &amp;&amp; !monster.Ghost)
+</span></span><span style="display:flex;"><span>            {
+</span></span><span style="display:flex;"><span>                <span style="color:#66d9ef">if</span> ((currentTick - monster.RunTick) &gt; monster.RunTime)
+</span></span><span style="display:flex;"><span>                {
+</span></span><span style="display:flex;"><span>                    monster.RunTick = dwRunTick;
+</span></span><span style="display:flex;"><span>                    
+</span></span><span style="display:flex;"><span>                    <span style="color:#75715e">// 怪物死亡复活逻辑</span>
+</span></span><span style="display:flex;"><span>                    <span style="color:#66d9ef">if</span> (monster.Death &amp;&amp; monster.CanReAlive &amp;&amp; monster.Invisible)
+</span></span><span style="display:flex;"><span>                    {
+</span></span><span style="display:flex;"><span>                        <span style="color:#66d9ef">if</span> ((HUtil32.GetTickCount() - monster.ReAliveTick) &gt; GetMonstersZenTime(monster.MonGen.ZenTime))
+</span></span><span style="display:flex;"><span>                        {
+</span></span><span style="display:flex;"><span>                            <span style="color:#66d9ef">if</span> (monster.ReAliveEx(monster.MonGen))
+</span></span><span style="display:flex;"><span>                            {
+</span></span><span style="display:flex;"><span>                                monster.ProcessRunCount = <span style="color:#ae81ff">0</span>;
+</span></span><span style="display:flex;"><span>                                monster.ReAliveTick = HUtil32.GetTickCount();
+</span></span><span style="display:flex;"><span>                            }
+</span></span><span style="display:flex;"><span>                        }
+</span></span><span style="display:flex;"><span>                    }
+</span></span><span style="display:flex;"><span>                    
+</span></span><span style="display:flex;"><span>                    <span style="color:#75715e">// 怪物AI逻辑</span>
+</span></span><span style="display:flex;"><span>                    <span style="color:#66d9ef">if</span> (!monster.IsVisibleActive &amp;&amp; (monster.ProcessRunCount &lt; SystemShare.Config.ProcessMonsterInterval))
+</span></span><span style="display:flex;"><span>                    {
+</span></span><span style="display:flex;"><span>                        monster.ProcessRunCount++;
+</span></span><span style="display:flex;"><span>                    }
+</span></span><span style="display:flex;"><span>                    <span style="color:#66d9ef">else</span>
+</span></span><span style="display:flex;"><span>                    {
+</span></span><span style="display:flex;"><span>                        <span style="color:#75715e">// 守卫和下属主动搜索附近的精灵</span>
+</span></span><span style="display:flex;"><span>                        <span style="color:#66d9ef">if</span> (monster.IsSlave || (monster.Race <span style="color:#66d9ef">is</span> ActorRace.Guard or ActorRace.ArcherGuard or ActorRace.SlaveMonster))
+</span></span><span style="display:flex;"><span>                        {
+</span></span><span style="display:flex;"><span>                            <span style="color:#66d9ef">if</span> ((currentTick - monster.SearchTick) &gt; monster.SearchTime)
+</span></span><span style="display:flex;"><span>                            {
+</span></span><span style="display:flex;"><span>                                monster.SearchTick = HUtil32.GetTickCount();
+</span></span><span style="display:flex;"><span>                                monster.SearchTarget();
+</span></span><span style="display:flex;"><span>                            }
+</span></span><span style="display:flex;"><span>                        }
+</span></span><span style="display:flex;"><span>                        
+</span></span><span style="display:flex;"><span>                        <span style="color:#75715e">// 执行怪物Run逻辑</span>
+</span></span><span style="display:flex;"><span>                        monster.Run();
+</span></span><span style="display:flex;"><span>                        monster.ProcessRunCount = <span style="color:#ae81ff">0</span>;
+</span></span><span style="display:flex;"><span>                    }
+</span></span><span style="display:flex;"><span>                }
+</span></span><span style="display:flex;"><span>            }
+</span></span><span style="display:flex;"><span>        }
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><h2 id="5-性能优化策略">5. 性能优化策略</h2>
+<h3 id="51-grid-based空间分割">5.1 Grid-based空间分割</h3>
+<ul>
+<li>地图被分割成Grid单元，每个单元维护对象列表</li>
+<li>AOI检测只需遍历相邻的Grid单元</li>
+<li>大幅减少了距离计算的复杂度</li>
+</ul>
+<h3 id="52-可见对象缓存">5.2 可见对象缓存</h3>
+<ul>
+<li>每500ms更新一次可见对象列表</li>
+<li>使用缓存列表进行快速消息广播</li>
+<li>避免频繁的空间查询</li>
+</ul>
+<h3 id="53-消息队列优化">5.3 消息队列优化</h3>
+<ul>
+<li>使用优先级消息队列</li>
+<li><code>SendUpdateMsg</code>合并重复消息</li>
+<li>延时消息降低优先级处理</li>
+</ul>
+<h3 id="54-多线程怪物处理">5.4 多线程怪物处理</h3>
+<ul>
+<li>怪物AI分布在多个线程中处理</li>
+<li>减少单线程的处理负担</li>
+<li>提高服务器整体性能</li>
+</ul>
+<h2 id="6-系统特点总结">6. 系统特点总结</h2>
+<h3 id="61-aoi系统特点">6.1 AOI系统特点</h3>
+<ul>
+<li><strong>Grid-based优化</strong>: 使用地图单元系统减少计算复杂度</li>
+<li><strong>视野缓存</strong>: 缓存可见对象列表，避免频繁查询</li>
+<li><strong>距离过滤</strong>: 支持不同的视野范围配置</li>
+</ul>
+<h3 id="62-寻路系统特点">6.2 寻路系统特点</h3>
+<ul>
+<li><strong>A*变种算法</strong>: 支持斜向移动的成本计算</li>
+<li><strong>路径优化</strong>: 自动优化路径，去除冗余点</li>
+<li><strong>多种移动模式</strong>: 支持走路、跑步等不同移动方式</li>
+</ul>
+<h3 id="63-同步机制特点">6.3 同步机制特点</h3>
+<ul>
+<li><strong>异步消息</strong>: 基于消息队列的异步通信</li>
+<li><strong>广播优化</strong>: 智能的AOI广播机制</li>
+<li><strong>状态合并</strong>: 避免重复的状态更新消息</li>
+</ul>
+<h3 id="64-性能特点">6.4 性能特点</h3>
+<ul>
+<li><strong>多线程处理</strong>: 怪物AI分布式处理</li>
+<li><strong>内存优化</strong>: 对象池和消息复用</li>
+<li><strong>网络优化</strong>: 减少不必要的网络包发送</li>
+</ul>
+<p>这个实现展现了一个成熟的MMO服务器架构，在性能和功能之间找到了良好的平衡点。</p>
+<h2 id="7-移动系统详细分析">7. 移动系统详细分析</h2>
+<h3 id="71-网格系统确认">7.1 网格系统确认</h3>
+<p><strong>OpenMir2的移动系统确实是基于网格(Grid)的</strong>，人物移动最终一定会处于单个网格的中心。以下是具体证据：</p>
+<h4 id="网格坐标系统">网格坐标系统</h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-csharp" data-lang="csharp"><span style="display:flex;"><span><span style="color:#75715e">// BaseObject.cs - 核心坐标属性</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">public</span> <span style="color:#66d9ef">short</span> CurrX { <span style="color:#66d9ef">get</span>; <span style="color:#66d9ef">set</span>; }  <span style="color:#75715e">// 当前X坐标 (整数网格坐标)</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">public</span> <span style="color:#66d9ef">short</span> CurrY { <span style="color:#66d9ef">get</span>; <span style="color:#66d9ef">set</span>; }  <span style="color:#75715e">// 当前Y坐标 (整数网格坐标)</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">public</span> <span style="color:#66d9ef">byte</span> Dir { <span style="color:#66d9ef">get</span>; <span style="color:#66d9ef">set</span>; }     <span style="color:#75715e">// 当前朝向 (8个方向)</span>
+</span></span></code></pre></div><h4 id="基础移动实现">基础移动实现</h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-csharp" data-lang="csharp"><span style="display:flex;"><span><span style="color:#75715e">// BaseObject.cs - WalkTo方法 (行走的核心实现)</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">protected</span> <span style="color:#66d9ef">bool</span> WalkTo(<span style="color:#66d9ef">byte</span> btDir, <span style="color:#66d9ef">bool</span> boFlag, <span style="color:#66d9ef">bool</span> fearFire = <span style="color:#66d9ef">false</span>)
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">bool</span> result = <span style="color:#66d9ef">false</span>;
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">short</span> oldX = CurrX;
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">short</span> oldY = CurrY;
+</span></span><span style="display:flex;"><span>    Dir = btDir;
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">short</span> newX = <span style="color:#ae81ff">0</span>;
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">short</span> newY = <span style="color:#ae81ff">0</span>;
+</span></span><span style="display:flex;"><span>    
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// 根据方向计算新的网格坐标</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">switch</span> (btDir)
+</span></span><span style="display:flex;"><span>    {
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">case</span> Direction.Up:
+</span></span><span style="display:flex;"><span>            newX = CurrX;
+</span></span><span style="display:flex;"><span>            newY = (<span style="color:#66d9ef">short</span>)(CurrY - <span style="color:#ae81ff">1</span>);  <span style="color:#75715e">// Y坐标减1</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">break</span>;
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">case</span> Direction.UpRight:
+</span></span><span style="display:flex;"><span>            newX = (<span style="color:#66d9ef">short</span>)(CurrX + <span style="color:#ae81ff">1</span>);  <span style="color:#75715e">// X坐标加1</span>
+</span></span><span style="display:flex;"><span>            newY = (<span style="color:#66d9ef">short</span>)(CurrY - <span style="color:#ae81ff">1</span>);  <span style="color:#75715e">// Y坐标减1</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">break</span>;
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">case</span> Direction.Right:
+</span></span><span style="display:flex;"><span>            newX = (<span style="color:#66d9ef">short</span>)(CurrX + <span style="color:#ae81ff">1</span>);  <span style="color:#75715e">// X坐标加1</span>
+</span></span><span style="display:flex;"><span>            newY = CurrY;
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">break</span>;
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">case</span> Direction.DownRight:
+</span></span><span style="display:flex;"><span>            newX = (<span style="color:#66d9ef">short</span>)(CurrX + <span style="color:#ae81ff">1</span>);  <span style="color:#75715e">// X坐标加1</span>
+</span></span><span style="display:flex;"><span>            newY = (<span style="color:#66d9ef">short</span>)(CurrY + <span style="color:#ae81ff">1</span>);  <span style="color:#75715e">// Y坐标加1</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">break</span>;
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">case</span> Direction.Down:
+</span></span><span style="display:flex;"><span>            newX = CurrX;
+</span></span><span style="display:flex;"><span>            newY = (<span style="color:#66d9ef">short</span>)(CurrY + <span style="color:#ae81ff">1</span>);  <span style="color:#75715e">// Y坐标加1</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">break</span>;
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">case</span> Direction.DownLeft:
+</span></span><span style="display:flex;"><span>            newX = (<span style="color:#66d9ef">short</span>)(CurrX - <span style="color:#ae81ff">1</span>);  <span style="color:#75715e">// X坐标减1</span>
+</span></span><span style="display:flex;"><span>            newY = (<span style="color:#66d9ef">short</span>)(CurrY + <span style="color:#ae81ff">1</span>);  <span style="color:#75715e">// Y坐标加1</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">break</span>;
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">case</span> Direction.Left:
+</span></span><span style="display:flex;"><span>            newX = (<span style="color:#66d9ef">short</span>)(CurrX - <span style="color:#ae81ff">1</span>);  <span style="color:#75715e">// X坐标减1</span>
+</span></span><span style="display:flex;"><span>            newY = CurrY;
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">break</span>;
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">case</span> Direction.UpLeft:
+</span></span><span style="display:flex;"><span>            newX = (<span style="color:#66d9ef">short</span>)(CurrX - <span style="color:#ae81ff">1</span>);  <span style="color:#75715e">// X坐标减1</span>
+</span></span><span style="display:flex;"><span>            newY = (<span style="color:#66d9ef">short</span>)(CurrY - <span style="color:#ae81ff">1</span>);  <span style="color:#75715e">// Y坐标减1</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">break</span>;
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>    
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// 检查边界和可行性</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> (newX &gt;= <span style="color:#ae81ff">0</span> &amp;&amp; Envir.Width - <span style="color:#ae81ff">1</span> &gt;= newX &amp;&amp; newY &gt;= <span style="color:#ae81ff">0</span> &amp;&amp; Envir.Height - <span style="color:#ae81ff">1</span> &gt;= newY)
+</span></span><span style="display:flex;"><span>    {
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e">// 尝试移动到新位置</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> (Envir.MoveToMovingObject(CurrX, CurrY, <span style="color:#66d9ef">this</span>, newX, newY, boFlag))
+</span></span><span style="display:flex;"><span>        {
+</span></span><span style="display:flex;"><span>            CurrX = newX;  <span style="color:#75715e">// 直接设置为新的网格坐标</span>
+</span></span><span style="display:flex;"><span>            CurrY = newY;  <span style="color:#75715e">// 直接设置为新的网格坐标</span>
+</span></span><span style="display:flex;"><span>        }
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>    
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// 如果位置发生了改变，触发Walk消息</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> (CurrX != oldX || CurrY != oldY)
+</span></span><span style="display:flex;"><span>    {
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> (Walk(Messages.RM_WALK))
+</span></span><span style="display:flex;"><span>        {
+</span></span><span style="display:flex;"><span>            result = <span style="color:#66d9ef">true</span>;
+</span></span><span style="display:flex;"><span>        }
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">else</span>
+</span></span><span style="display:flex;"><span>        {
+</span></span><span style="display:flex;"><span>            <span style="color:#75715e">// 移动失败，回滚到原位置</span>
+</span></span><span style="display:flex;"><span>            Envir.DeleteFromMap(CurrX, CurrY, CellType, <span style="color:#66d9ef">this</span>.ActorId, <span style="color:#66d9ef">this</span>);
+</span></span><span style="display:flex;"><span>            CurrX = oldX;
+</span></span><span style="display:flex;"><span>            CurrY = oldY;
+</span></span><span style="display:flex;"><span>            Envir.AddMapObject(CurrX, CurrY, CellType, <span style="color:#66d9ef">this</span>.ActorId, <span style="color:#66d9ef">this</span>);
+</span></span><span style="display:flex;"><span>        }
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> result;
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><h4 id="地图网格管理">地图网格管理</h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-csharp" data-lang="csharp"><span style="display:flex;"><span><span style="color:#75715e">// Envirnoment.cs - MoveToMovingObject方法 (网格级别的移动管理)</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">public</span> <span style="color:#66d9ef">bool</span> MoveToMovingObject(<span style="color:#66d9ef">int</span> nCx, <span style="color:#66d9ef">int</span> nCy, IActor cert, <span style="color:#66d9ef">int</span> nX, <span style="color:#66d9ef">int</span> nY, <span style="color:#66d9ef">bool</span> boFlag)
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> (!CellMatch(nX, nY)) <span style="color:#66d9ef">return</span> <span style="color:#66d9ef">false</span>;
+</span></span><span style="display:flex;"><span>    
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">bool</span> canMove = <span style="color:#66d9ef">true</span>;
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">bool</span> result = <span style="color:#66d9ef">false</span>;
+</span></span><span style="display:flex;"><span>    
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// 获取目标网格的信息</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">ref</span> MapCellInfo cellInfo = <span style="color:#66d9ef">ref</span> GetCellInfo(nX, nY, <span style="color:#66d9ef">out</span> <span style="color:#66d9ef">bool</span> cellSuccess);
+</span></span><span style="display:flex;"><span>    
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> (!boFlag &amp;&amp; cellSuccess)
+</span></span><span style="display:flex;"><span>    {
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> (cellInfo.Valid &amp;&amp; cellInfo.IsAvailable)
+</span></span><span style="display:flex;"><span>        {
+</span></span><span style="display:flex;"><span>            <span style="color:#75715e">// 检查目标网格是否被占用</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">for</span> (<span style="color:#66d9ef">int</span> i = <span style="color:#ae81ff">0</span>; i &lt; cellInfo.ObjList.Count; i++)
+</span></span><span style="display:flex;"><span>            {
+</span></span><span style="display:flex;"><span>                CellObject cellObject = cellInfo.ObjList[i];
+</span></span><span style="display:flex;"><span>                <span style="color:#66d9ef">if</span> (cellObject.ActorObject)
+</span></span><span style="display:flex;"><span>                {
+</span></span><span style="display:flex;"><span>                    IActor baseObject = SystemShare.ActorMgr.Get(cellObject.CellObjId);
+</span></span><span style="display:flex;"><span>                    <span style="color:#66d9ef">if</span> (baseObject != <span style="color:#66d9ef">null</span> &amp;&amp; !baseObject.Ghost &amp;&amp; !baseObject.Death)
+</span></span><span style="display:flex;"><span>                    {
+</span></span><span style="display:flex;"><span>                        canMove = <span style="color:#66d9ef">false</span>; <span style="color:#75715e">// 网格被占用，无法移动</span>
+</span></span><span style="display:flex;"><span>                        <span style="color:#66d9ef">break</span>;
+</span></span><span style="display:flex;"><span>                    }
+</span></span><span style="display:flex;"><span>                }
+</span></span><span style="display:flex;"><span>            }
+</span></span><span style="display:flex;"><span>        }
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>    
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> (canMove &amp;&amp; cellInfo.Valid)
+</span></span><span style="display:flex;"><span>    {
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e">// 从原网格移除对象</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">ref</span> MapCellInfo oldCellInfo = <span style="color:#66d9ef">ref</span> GetCellInfo(nCx, nCy, <span style="color:#66d9ef">out</span> <span style="color:#66d9ef">bool</span> oldSuccess);
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> (oldSuccess &amp;&amp; oldCellInfo.IsAvailable)
+</span></span><span style="display:flex;"><span>        {
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">for</span> (<span style="color:#66d9ef">int</span> i = <span style="color:#ae81ff">0</span>; i &lt; oldCellInfo.ObjList.Count; i++)
+</span></span><span style="display:flex;"><span>            {
+</span></span><span style="display:flex;"><span>                CellObject moveObject = oldCellInfo.ObjList[i];
+</span></span><span style="display:flex;"><span>                <span style="color:#66d9ef">if</span> (moveObject.CellObjId == cert.ActorId &amp;&amp; moveObject.ActorObject)
+</span></span><span style="display:flex;"><span>                {
+</span></span><span style="display:flex;"><span>                    oldCellInfo.Remove(i); <span style="color:#75715e">// 从原网格移除</span>
+</span></span><span style="display:flex;"><span>                    <span style="color:#66d9ef">break</span>;
+</span></span><span style="display:flex;"><span>                }
+</span></span><span style="display:flex;"><span>            }
+</span></span><span style="display:flex;"><span>        }
+</span></span><span style="display:flex;"><span>        
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e">// 添加到新网格</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> (cellSuccess)
+</span></span><span style="display:flex;"><span>        {
+</span></span><span style="display:flex;"><span>            cellInfo.ObjList ??= <span style="color:#66d9ef">new</span> NativeList&lt;CellObject&gt;();
+</span></span><span style="display:flex;"><span>            cellInfo.Add(moveObject); <span style="color:#75715e">// 添加到新网格</span>
+</span></span><span style="display:flex;"><span>            result = <span style="color:#66d9ef">true</span>;
+</span></span><span style="display:flex;"><span>        }
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> result;
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><h4 id="方向计算">方向计算</h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-csharp" data-lang="csharp"><span style="display:flex;"><span><span style="color:#75715e">// M2Share.cs - GetNextDirection方法 (计算两点间的移动方向)</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">public</span> <span style="color:#66d9ef">static</span> <span style="color:#66d9ef">byte</span> GetNextDirection(<span style="color:#66d9ef">short</span> sx, <span style="color:#66d9ef">short</span> sy, <span style="color:#66d9ef">short</span> dx, <span style="color:#66d9ef">short</span> dy)
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">short</span> flagx, flagy;
+</span></span><span style="display:flex;"><span>    
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// 计算X方向</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> (sx &lt; dx) flagx = <span style="color:#ae81ff">1</span>;       <span style="color:#75715e">// 向右</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">if</span> (sx == dx) flagx = <span style="color:#ae81ff">0</span>; <span style="color:#75715e">// 不动</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">else</span> flagx = -<span style="color:#ae81ff">1</span>;              <span style="color:#75715e">// 向左</span>
+</span></span><span style="display:flex;"><span>    
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// 计算Y方向  </span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> (sy &lt; dy) flagy = <span style="color:#ae81ff">1</span>;       <span style="color:#75715e">// 向下</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">if</span> (sy == dy) flagy = <span style="color:#ae81ff">0</span>; <span style="color:#75715e">// 不动</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">else</span> flagy = -<span style="color:#ae81ff">1</span>;              <span style="color:#75715e">// 向上</span>
+</span></span><span style="display:flex;"><span>    
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// 根据flagx和flagy的组合返回8个方向之一</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> (flagx == <span style="color:#ae81ff">0</span> &amp;&amp; flagy == -<span style="color:#ae81ff">1</span>) <span style="color:#66d9ef">return</span> Direction.Up;
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> (flagx == <span style="color:#ae81ff">1</span> &amp;&amp; flagy == -<span style="color:#ae81ff">1</span>) <span style="color:#66d9ef">return</span> Direction.UpRight;
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> (flagx == <span style="color:#ae81ff">1</span> &amp;&amp; flagy == <span style="color:#ae81ff">0</span>) <span style="color:#66d9ef">return</span> Direction.Right;
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> (flagx == <span style="color:#ae81ff">1</span> &amp;&amp; flagy == <span style="color:#ae81ff">1</span>) <span style="color:#66d9ef">return</span> Direction.DownRight;
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> (flagx == <span style="color:#ae81ff">0</span> &amp;&amp; flagy == <span style="color:#ae81ff">1</span>) <span style="color:#66d9ef">return</span> Direction.Down;
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> (flagx == -<span style="color:#ae81ff">1</span> &amp;&amp; flagy == <span style="color:#ae81ff">1</span>) <span style="color:#66d9ef">return</span> Direction.DownLeft;
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> (flagx == -<span style="color:#ae81ff">1</span> &amp;&amp; flagy == <span style="color:#ae81ff">0</span>) <span style="color:#66d9ef">return</span> Direction.Left;
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> (flagx == -<span style="color:#ae81ff">1</span> &amp;&amp; flagy == -<span style="color:#ae81ff">1</span>) <span style="color:#66d9ef">return</span> Direction.UpLeft;
+</span></span><span style="display:flex;"><span>    
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> Direction.Down;
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><h3 id="72-网格系统特点分析">7.2 网格系统特点分析</h3>
+<h4 id="离散坐标系统">离散坐标系统</h4>
+<ul>
+<li><strong>整数坐标</strong>: 所有位置都是整数坐标 (short CurrX, short CurrY)</li>
+<li><strong>单位移动</strong>: 每次移动只能移动到相邻的8个网格之一</li>
+<li><strong>无连续移动</strong>: 不存在浮点坐标或中间位置</li>
+</ul>
+<h4 id="网格占用机制">网格占用机制</h4>
+<ul>
+<li><strong>互斥性</strong>: 每个网格最多只能被一个实体占用</li>
+<li><strong>碰撞检测</strong>: 通过检查目标网格是否被占用来实现碰撞检测</li>
+<li><strong>原子操作</strong>: 移动是原子的，要么成功移动到目标网格，要么保持原位</li>
+</ul>
+<h4 id="8方向移动">8方向移动</h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-csharp" data-lang="csharp"><span style="display:flex;"><span><span style="color:#75715e">// 支持的8个移动方向</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">public</span> <span style="color:#66d9ef">class</span> <span style="color:#a6e22e">Direction</span>
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">public</span> <span style="color:#66d9ef">const</span> <span style="color:#66d9ef">byte</span> Up = <span style="color:#ae81ff">0</span>;        <span style="color:#75715e">// 上 (0, -1)</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">public</span> <span style="color:#66d9ef">const</span> <span style="color:#66d9ef">byte</span> UpRight = <span style="color:#ae81ff">1</span>;   <span style="color:#75715e">// 右上 (1, -1)</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">public</span> <span style="color:#66d9ef">const</span> <span style="color:#66d9ef">byte</span> Right = <span style="color:#ae81ff">2</span>;     <span style="color:#75715e">// 右 (1, 0)</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">public</span> <span style="color:#66d9ef">const</span> <span style="color:#66d9ef">byte</span> DownRight = <span style="color:#ae81ff">3</span>; <span style="color:#75715e">// 右下 (1, 1)</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">public</span> <span style="color:#66d9ef">const</span> <span style="color:#66d9ef">byte</span> Down = <span style="color:#ae81ff">4</span>;      <span style="color:#75715e">// 下 (0, 1)</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">public</span> <span style="color:#66d9ef">const</span> <span style="color:#66d9ef">byte</span> DownLeft = <span style="color:#ae81ff">5</span>;  <span style="color:#75715e">// 左下 (-1, 1)</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">public</span> <span style="color:#66d9ef">const</span> <span style="color:#66d9ef">byte</span> Left = <span style="color:#ae81ff">6</span>;      <span style="color:#75715e">// 左 (-1, 0)</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">public</span> <span style="color:#66d9ef">const</span> <span style="color:#66d9ef">byte</span> UpLeft = <span style="color:#ae81ff">7</span>;    <span style="color:#75715e">// 左上 (-1, -1)</span>
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><h3 id="73-移动同步机制">7.3 移动同步机制</h3>
+<h4 id="客户端同步">客户端同步</h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-csharp" data-lang="csharp"><span style="display:flex;"><span><span style="color:#75715e">// 移动成功后发送给客户端的消息</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">if</span> (CurrX != oldX || CurrY != oldY)
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> (Walk(Messages.RM_WALK))
+</span></span><span style="display:flex;"><span>    {
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e">// 发送移动消息到可见范围内的所有玩家</span>
+</span></span><span style="display:flex;"><span>        SendRefMsg(Messages.RM_WALK, Dir, CurrX, CurrY, <span style="color:#ae81ff">0</span>, <span style="color:#e6db74">&#34;&#34;</span>);
+</span></span><span style="display:flex;"><span>        result = <span style="color:#66d9ef">true</span>;
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><h4 id="移动消息格式">移动消息格式</h4>
+<ul>
+<li><strong>消息类型</strong>: RM_WALK (行走消息)</li>
+<li><strong>参数1</strong>: Dir (移动方向)</li>
+<li><strong>参数2</strong>: CurrX (新的X坐标)</li>
+<li><strong>参数3</strong>: CurrY (新的Y坐标)</li>
+<li><strong>广播范围</strong>: 视野范围内的所有玩家</li>
+</ul>
+<h3 id="74-与其他系统的区别">7.4 与其他系统的区别</h3>
+<p><strong>OpenMir2 vs 现代MMO</strong>:</p>
+<table>
+  <thead>
+      <tr>
+          <th>特性</th>
+          <th>OpenMir2</th>
+          <th>现代MMO</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>坐标系统</td>
+          <td>整数网格坐标</td>
+          <td>浮点连续坐标</td>
+      </tr>
+      <tr>
+          <td>移动方式</td>
+          <td>8方向离散移动</td>
+          <td>360度连续移动</td>
+      </tr>
+      <tr>
+          <td>位置精度</td>
+          <td>网格中心</td>
+          <td>任意精确位置</td>
+      </tr>
+      <tr>
+          <td>碰撞检测</td>
+          <td>网格占用检测</td>
+          <td>几何碰撞检测</td>
+      </tr>
+      <tr>
+          <td>移动平滑</td>
+          <td>客户端插值</td>
+          <td>服务器预测+客户端预测</td>
+      </tr>
+  </tbody>
+</table>
+<h3 id="75-网格系统的优势">7.5 网格系统的优势</h3>
+<ol>
+<li><strong>简化计算</strong>: 整数运算比浮点运算更快</li>
+<li><strong>确定性</strong>: 避免浮点精度问题</li>
+<li><strong>易于调试</strong>: 位置信息直观易懂</li>
+<li><strong>网络效率</strong>: 坐标数据更紧凑</li>
+<li><strong>防作弊</strong>: 移动验证更简单</li>
+</ol>
+<h3 id="76-结论">7.6 结论</h3>
+<p><strong>OpenMir2的移动系统是典型的基于网格的离散移动系统</strong>:</p>
+<ul>
+<li>✅ 人物<strong>必须</strong>位于网格中心</li>
+<li>✅ 每次移动只能到达相邻的8个网格之一</li>
+<li>✅ 使用整数坐标系统</li>
+<li>✅ 通过网格占用实现碰撞检测</li>
+<li>✅ 移动是原子操作，不存在中间状态</li>
+</ul>
+<p>这种设计符合传统2D MMO的特点，简化了服务器逻辑，提高了性能，但在移动的灵活性和平滑度方面有所限制。客户端可能通过动画插值来实现视觉上的平滑移动效果。</p>
+
+</main>
+
+  <footer>
+  
+  
+  </footer>
+  </body>
+</html>
+
