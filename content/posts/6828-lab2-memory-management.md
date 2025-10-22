@@ -52,6 +52,50 @@ PTE：
 
 ## 代码分析
 
+### 简化分段机制
+
+`boot.S`，selector 都设置为 0：
+
+```asm
+# Set up the important data segment registers (DS, ES, SS).
+xorw    %ax,%ax             # Segment number zero
+movw    %ax,%ds             # -> Data Segment
+movw    %ax,%es             # -> Extra Segment
+movw    %ax,%ss             # -> Stack Segment
+```
+
+`lgdt gdtdesc` 给 GDTR 指 GDT 的位置： 
+
+```asm
+# Bootstrap GDT
+.p2align 2                                # force 4 byte alignment
+gdt:
+  SEG_NULL				# null seg
+  SEG(STA_X|STA_R, 0x0, 0xffffffff)	# code seg
+  SEG(STA_W, 0x0, 0xffffffff)	        # data seg
+
+gdtdesc:
+  .word   0x17                            # sizeof(gdt) - 1
+  .long   gdt                             # address gdt
+```
+
+GDT 第一项默认空段，`mmu.h` 找字节组合的宏：
+
+```c
+/*
+ * Macros to build GDT entries in assembly.
+ */
+#define SEG_NULL						\
+	.word 0, 0;						\
+	.byte 0, 0, 0, 0
+#define SEG(type,base,lim)					\
+	.word (((lim) >> 12) & 0xffff), ((base) & 0xffff);	\
+	.byte (((base) >> 16) & 0xff), (0x90 | (type)),		\
+		(0xC0 | (((lim) >> 28) & 0xf)), (((base) >> 24) & 0xff)
+```
+
+`granularity` 是 1 也就是单位是 page 4KB，`limit` 是 2^20，因此 code/data 段都是指向的 0~4GB。
+
 ### 临时页管理
 
 `entry.S`：
@@ -92,7 +136,7 @@ pte_t entry_pgtable[NPTENTRIES] = {
 
 `kernel.ld` 已知：
 
-```
+```c
 SECTIONS
 {
 	/* Link the kernel at this address: "." means the current address */
@@ -101,7 +145,7 @@ SECTIONS
 
 `memlayout.h` 已知：
 
-```
+```c
 // All physical memory mapped at this address
 #define	KERNBASE	0xF0000000
 ```
