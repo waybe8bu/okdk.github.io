@@ -13,7 +13,7 @@
       <link>/posts/6828-lab2-memory-management/</link>
       <pubDate>Sat, 13 Jan 2024 00:00:00 +0000</pubDate>
       <guid>/posts/6828-lab2-memory-management/</guid>
-      <description>&lt;p&gt;1&lt;/p&gt;</description>
+      <description>&lt;p&gt;虚拟地址(VA) -&amp;gt; 线性地址(LA) -&amp;gt; 物理地址(PA)&lt;/p&gt;&#xA;&lt;pre tabindex=&#34;0&#34;&gt;&lt;code&gt;           Selector  +--------------+         +-----------+&#xA;          ----------&amp;gt;|              |         |           |&#xA;                     | Segmentation |         |  Paging   |&#xA;Software             |              |--------&amp;gt;|           |----------&amp;gt;  RAM&#xA;            Offset   |  Mechanism   |         | Mechanism |&#xA;          ----------&amp;gt;|              |         |           |&#xA;                     +--------------+         +-----------+&#xA;            Virtual                   Linear                Physical&#xA;&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;IA-32e 分页机制：&lt;/p&gt;&#xA;&lt;p&gt;&lt;img src=&#34;https://pdos.csail.mit.edu/6.828/2018/readings/i386/fig5-12.gif&#34; alt=&#34;&#34;&gt;&lt;/p&gt;&#xA;&lt;p&gt;一般如 c 语言的指针 CS:IP（&lt;a href=&#34;https://en.wikipedia.org/wiki/X86#32-bit&#34;&gt;寄存器大小&lt;/a&gt;），实模式下通过 CS&amp;laquo;4+IP 得到 20-bit 的物理地址，而保护模式+开启分页下的寻址过程为：&lt;/p&gt;&#xA;&lt;blockquote&gt;&#xA;&lt;p&gt;1、段寄存器硬件设计实际有 48-bit，16-bit 的 visible part 和 32-bit 的 invisible part，16-bit 存 segment selector，通过 selector 去 GDT 找 segment descriptor，GDT 的位置由 GDTR 寄存器给出，找完之后 descriptor 会缓存到 invisible part。&lt;/p&gt;</description>
     </item>
     <item>
       <title>OpenMir2 怪物系统技术分析</title>
