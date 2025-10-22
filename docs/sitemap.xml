@@ -2,13 +2,16 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
   xmlns:xhtml="http://www.w3.org/1999/xhtml">
   <url>
-    <loc>/</loc>
-    <lastmod>2024-01-12T00:00:00+00:00</lastmod>
+    <loc>/posts/6828-lab2-memory-management/</loc>
+    <lastmod>2024-01-13T00:00:00+00:00</lastmod>
   </url><url>
-    <loc>/posts/mir-openmir2-monster-analysis/</loc>
-    <lastmod>2024-01-12T00:00:00+00:00</lastmod>
+    <loc>/</loc>
+    <lastmod>2024-01-13T00:00:00+00:00</lastmod>
   </url><url>
     <loc>/posts/</loc>
+    <lastmod>2024-01-13T00:00:00+00:00</lastmod>
+  </url><url>
+    <loc>/posts/mir-openmir2-monster-analysis/</loc>
     <lastmod>2024-01-12T00:00:00+00:00</lastmod>
   </url><url>
     <loc>/posts/cxydzwxy-jtlj/</loc>
