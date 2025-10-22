@@ -40,7 +40,7 @@ LA：
 
 > 3、CR3 寄存器指定 PD 的位置，通过 LA.DIR 去 PD 里找到指定的 PDE(Page Directory Entry)。
 
-> 4、通过 PDE.31~12 找到 PT 的位置，通过 LA.PAGE 去 PT 里找到指定的 PTE（Page Table Entry）。
+> 4、通过 PDE.31~12 找到 PT 的位置，通过 LA.PAGE 去 PT 里找到指定的 PTE(Page Table Entry)。
 
 PTE：
 
