@@ -28,6 +28,7 @@
 </div>
 
 <main>
+<h2 id="原理分析">原理分析</h2>
 <p>虚拟地址(VA) -&gt; 线性地址(LA) -&gt; 物理地址(PA)</p>
 <pre tabindex="0"><code>           Selector  +--------------+         +-----------+
           ----------&gt;|              |         |           |
@@ -57,7 +58,79 @@ Software             |              |--------&gt;|           |----------&gt;  RA
 <p>PTE：</p>
 <p><img src="https://pdos.csail.mit.edu/6.828/2018/readings/i386/fig5-10.gif" alt=""></p>
 <blockquote>
-<p>5、最终 PTE.31~12 + LA.OFFSET 就是 PA。</p></blockquote>
+<p>5、最终通过 PTE.31~12 找到 page frame，再通过 LA.OFFSET 就能得到 PA。</p></blockquote>
+<h2 id="代码分析">代码分析</h2>
+<h3 id="临时页管理">临时页管理</h3>
+<p><code>entry.S</code>：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-asm" data-lang="asm"><span style="display:flex;"><span><span style="color:#75715e"># Load the physical address of entry_pgdir into cr3.  entry_pgdir
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"># is defined in entrypgdir.c.
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#a6e22e">movl</span>	<span style="color:#66d9ef">$</span>(<span style="color:#66d9ef">RELOC</span>(<span style="color:#66d9ef">entry_pgdir</span>)), %eax
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">movl</span>	%eax, %cr3
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># Turn on paging.
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#a6e22e">movl</span>	%cr0, %eax
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">orl</span>	<span style="color:#66d9ef">$</span>(<span style="color:#66d9ef">CR0_PE</span><span style="color:#960050;background-color:#1e0010">|</span><span style="color:#66d9ef">CR0_PG</span><span style="color:#960050;background-color:#1e0010">|</span><span style="color:#66d9ef">CR0_WP</span>), %eax
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">movl</span>	%eax, %cr0
+</span></span></code></pre></div><p>通过这段汇编可以知道 PD 的内容其实就是 <code>entrypgdir.c</code> 里 <code>entry_pgdir</code> 的位置：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#66d9ef">pte_t</span> entry_pgtable[NPTENTRIES];
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">__attribute__</span>((<span style="color:#a6e22e">__aligned__</span>(PGSIZE)))
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">pde_t</span> entry_pgdir[NPDENTRIES] <span style="color:#f92672">=</span> {
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// Map VA&#39;s [0, 4MB) to PA&#39;s [0, 4MB)
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	[<span style="color:#ae81ff">0</span>]
+</span></span><span style="display:flex;"><span>		<span style="color:#f92672">=</span> ((<span style="color:#66d9ef">uintptr_t</span>)entry_pgtable <span style="color:#f92672">-</span> KERNBASE) <span style="color:#f92672">+</span> PTE_P,
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// Map VA&#39;s [KERNBASE, KERNBASE+4MB) to PA&#39;s [0, 4MB)
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	[KERNBASE<span style="color:#f92672">&gt;&gt;</span>PDXSHIFT]
+</span></span><span style="display:flex;"><span>		<span style="color:#f92672">=</span> ((<span style="color:#66d9ef">uintptr_t</span>)entry_pgtable <span style="color:#f92672">-</span> KERNBASE) <span style="color:#f92672">+</span> PTE_P <span style="color:#f92672">+</span> PTE_W
+</span></span><span style="display:flex;"><span>};
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">__attribute__</span>((<span style="color:#a6e22e">__aligned__</span>(PGSIZE)))
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">pte_t</span> entry_pgtable[NPTENTRIES] <span style="color:#f92672">=</span> {
+</span></span><span style="display:flex;"><span>	<span style="color:#ae81ff">0x000000</span> <span style="color:#f92672">|</span> PTE_P <span style="color:#f92672">|</span> PTE_W,
+</span></span><span style="display:flex;"><span>  <span style="color:#75715e">// 这里省略...
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#ae81ff">0x3ff000</span> <span style="color:#f92672">|</span> PTE_P <span style="color:#f92672">|</span> PTE_W,
+</span></span><span style="display:flex;"><span>};
+</span></span></code></pre></div><p><code>kernel.ld</code> 已知：</p>
+<pre tabindex="0"><code>SECTIONS
+{
+	/* Link the kernel at this address: &#34;.&#34; means the current address */
+	. = 0xF0100000;
+</code></pre><p><code>memlayout.h</code> 已知：</p>
+<pre tabindex="0"><code>// All physical memory mapped at this address
+#define	KERNBASE	0xF0000000
+</code></pre><p>lab1 的内存低位分布如下：</p>
+<pre tabindex="0"><code>+------------------+  &lt;- 0xFFFFFFFF (4GB)
+|      32-bit      |
+|  memory mapped   |
+|     devices      |
+|                  |
+/\/\/\/\/\/\/\/\/\/\
+
+/\/\/\/\/\/\/\/\/\/\
+|                  |
+|      Unused      |
+|                  |
++------------------+  &lt;- depends on amount of RAM
+|                  |
+|                  |
+| Extended Memory  |
+|                  |
+|                  |
++------------------+  &lt;- 0x00100000 (1MB)
+|     BIOS ROM     |
++------------------+  &lt;- 0x000F0000 (960KB)
+|  16-bit devices, |
+|  expansion ROMs  |
++------------------+  &lt;- 0x000C0000 (768KB)
+|   VGA Display    |
++------------------+  &lt;- 0x000A0000 (640KB)
+|                  |
+|    Low Memory    |
+|                  |
++------------------+  &lt;- 0x00000000
+</code></pre><p>因此，很容易看出，通过 &ldquo;手搓&rdquo; <code>entry_pgtable</code> 的方式，直接将 PT 硬编码固定映射到 PA 0~4MB 的区间，由于 <code>KERNBASE</code> 的 VA 是 <code>0xF0000000</code>，为了避开 IO hole，link address 选在了 <code>0xF0100000</code>。</p>
+<p>之所以有这个临时的页管理，是因为 <code>entry.S</code> 部分执行完分页就已经开启了，后续 c 语言一起 link 进来的代码也已经是 VA，但是分页真正的动态管理初始化代码还没有执行完，所以就需要一个 tiny 且固定的 PD/PT 暂时可用，这样在 <code>entry.S</code> 执行完到动态页管理完全生效之前的这部分 c 代码才能正常执行。</p>
+<h3 id="正式页管理">正式页管理</h3>
+<p>TODO</p>
 
 </main>
 
