@@ -160,7 +160,146 @@ Software             |              |--------&gt;|           |----------&gt;  RA
 </code></pre><p>因此，很容易看出，通过 &ldquo;手搓&rdquo; <code>entry_pgtable</code> 的方式，直接将 PT 硬编码固定映射到 PA 0~4MB 的区间，由于 <code>KERNBASE</code> 的 VA 是 <code>0xF0000000</code>，为了避开 IO hole，link address 选在了 <code>0xF0100000</code>。</p>
 <p>之所以有这个临时的页管理，是因为 <code>entry.S</code> 部分执行完分页就已经开启了，后续 c 语言一起 link 进来的代码也已经是 VA，但是分页真正的动态管理初始化代码还没有执行完，所以就需要一个 tiny 且固定的 PD/PT 暂时可用，这样在 <code>entry.S</code> 执行完到动态页管理完全生效之前的这部分 c 代码才能正常执行。</p>
 <h3 id="正式页管理">正式页管理</h3>
-<p>TODO</p>
+<p><code>entry.S</code> 第一个调用的 c 方法是：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-asm" data-lang="asm"><span style="display:flex;"><span><span style="color:#75715e"># now to C code
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#a6e22e">call</span>	<span style="color:#66d9ef">i386_init</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#66d9ef">void</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">i386_init</span>(<span style="color:#66d9ef">void</span>)
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">extern</span> <span style="color:#66d9ef">char</span> edata[], end[];
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// Before doing anything else, complete the ELF loading process.
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">// Clear the uninitialized global data (BSS) section of our program.
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">// This ensures that all static/global variables start out zero.
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">memset</span>(edata, <span style="color:#ae81ff">0</span>, end <span style="color:#f92672">-</span> edata);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// Initialize the console.
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">// Can&#39;t call cprintf until after we do this!
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">cons_init</span>();
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">cprintf</span>(<span style="color:#e6db74">&#34;6828 decimal is %o octal!</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>, <span style="color:#ae81ff">6828</span>);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// Lab 2 memory management initialization functions
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">mem_init</span>();
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// Drop into the kernel monitor.
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#66d9ef">while</span> (<span style="color:#ae81ff">1</span>)
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">monitor</span>(NULL);
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>接着：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#75715e">// Set up a two-level page table:
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">//    kern_pgdir is its linear (virtual) address of the root
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">//
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">// This function only sets up the kernel part of the address space
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">// (ie. addresses &gt;= UTOP).  The user part of the address space
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">// will be set up later.
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">//
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">// From UTOP to ULIM, the user is allowed to read but not write.
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">// Above ULIM the user cannot read or write.
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">void</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">mem_init</span>(<span style="color:#66d9ef">void</span>)
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">uint32_t</span> cr0;
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">size_t</span> n;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// Find out how much memory the machine has (npages &amp; npages_basemem).
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">i386_detect_memory</span>();
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// Remove this line when you&#39;re ready to test this function.
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">panic</span>(<span style="color:#e6db74">&#34;mem_init: This function is not finished</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">//////////////////////////////////////////////////////////////////////
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">// create initial page directory.
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	kern_pgdir <span style="color:#f92672">=</span> (<span style="color:#66d9ef">pde_t</span> <span style="color:#f92672">*</span>) <span style="color:#a6e22e">boot_alloc</span>(PGSIZE);
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">memset</span>(kern_pgdir, <span style="color:#ae81ff">0</span>, PGSIZE);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">//////////////////////////////////////////////////////////////////////
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">// Recursively insert PD in itself as a page table, to form
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">// a virtual page table at virtual address UVPT.
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">// (For now, you don&#39;t have understand the greater purpose of the
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">// following line.)
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// Permissions: kernel R, user R
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	kern_pgdir[<span style="color:#a6e22e">PDX</span>(UVPT)] <span style="color:#f92672">=</span> <span style="color:#a6e22e">PADDR</span>(kern_pgdir) <span style="color:#f92672">|</span> PTE_U <span style="color:#f92672">|</span> PTE_P;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">//////////////////////////////////////////////////////////////////////
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">// Allocate an array of npages &#39;struct PageInfo&#39;s and store it in &#39;pages&#39;.
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">// The kernel uses this array to keep track of physical pages: for
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">// each physical page, there is a corresponding struct PageInfo in this
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">// array.  &#39;npages&#39; is the number of physical pages in memory.  Use memset
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">// to initialize all fields of each struct PageInfo to 0.
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">// Your code goes here:
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">//////////////////////////////////////////////////////////////////////
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">// Now that we&#39;ve allocated the initial kernel data structures, we set
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">// up the list of free physical pages. Once we&#39;ve done so, all further
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">// memory management will go through the page_* functions. In
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">// particular, we can now map memory using boot_map_region
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">// or page_insert
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">page_init</span>();
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">check_page_free_list</span>(<span style="color:#ae81ff">1</span>);
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">check_page_alloc</span>();
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">check_page</span>();
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">//////////////////////////////////////////////////////////////////////
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">// Now we set up virtual memory
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">//////////////////////////////////////////////////////////////////////
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">// Map &#39;pages&#39; read-only by the user at linear address UPAGES
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">// Permissions:
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">//    - the new image at UPAGES -- kernel R, user R
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">//      (ie. perm = PTE_U | PTE_P)
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">//    - pages itself -- kernel RW, user NONE
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">// Your code goes here:
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">//////////////////////////////////////////////////////////////////////
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">// Use the physical memory that &#39;bootstack&#39; refers to as the kernel
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">// stack.  The kernel stack grows down from virtual address KSTACKTOP.
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">// We consider the entire range from [KSTACKTOP-PTSIZE, KSTACKTOP)
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">// to be the kernel stack, but break this into two pieces:
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">//     * [KSTACKTOP-KSTKSIZE, KSTACKTOP) -- backed by physical memory
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">//     * [KSTACKTOP-PTSIZE, KSTACKTOP-KSTKSIZE) -- not backed; so if
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">//       the kernel overflows its stack, it will fault rather than
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">//       overwrite memory.  Known as a &#34;guard page&#34;.
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">//     Permissions: kernel RW, user NONE
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">// Your code goes here:
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">//////////////////////////////////////////////////////////////////////
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">// Map all of physical memory at KERNBASE.
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">// Ie.  the VA range [KERNBASE, 2^32) should map to
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">//      the PA range [0, 2^32 - KERNBASE)
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">// We might not have 2^32 - KERNBASE bytes of physical memory, but
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">// we just set up the mapping anyway.
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">// Permissions: kernel RW, user NONE
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">// Your code goes here:
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// Check that the initial page directory has been set up correctly.
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">check_kern_pgdir</span>();
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// Switch from the minimal entry page directory to the full kern_pgdir
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">// page table we just created.	Our instruction pointer should be
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">// somewhere between KERNBASE and KERNBASE+4MB right now, which is
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">// mapped the same way by both page tables.
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">//
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">// If the machine reboots at this point, you&#39;ve probably set up your
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">// kern_pgdir wrong.
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">lcr3</span>(<span style="color:#a6e22e">PADDR</span>(kern_pgdir));
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">check_page_free_list</span>(<span style="color:#ae81ff">0</span>);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// entry.S set the really important flags in cr0 (including enabling
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">// paging).  Here we configure the rest of the flags that we care about.
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	cr0 <span style="color:#f92672">=</span> <span style="color:#a6e22e">rcr0</span>();
+</span></span><span style="display:flex;"><span>	cr0 <span style="color:#f92672">|=</span> CR0_PE<span style="color:#f92672">|</span>CR0_PG<span style="color:#f92672">|</span>CR0_AM<span style="color:#f92672">|</span>CR0_WP<span style="color:#f92672">|</span>CR0_NE<span style="color:#f92672">|</span>CR0_MP;
+</span></span><span style="display:flex;"><span>	cr0 <span style="color:#f92672">&amp;=</span> <span style="color:#f92672">~</span>(CR0_TS<span style="color:#f92672">|</span>CR0_EM);
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">lcr0</span>(cr0);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// Some more checks, only possible after kern_pgdir is installed.
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">check_page_installed_pgdir</span>();
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>TODO</p>
 
 </main>
 

@@ -190,4 +190,154 @@ lab1 的内存低位分布如下：
 
 ### 正式页管理
 
+`entry.S` 第一个调用的 c 方法是：
+
+```asm
+# now to C code
+call	i386_init
+```
+
+```c
+void
+i386_init(void)
+{
+	extern char edata[], end[];
+
+	// Before doing anything else, complete the ELF loading process.
+	// Clear the uninitialized global data (BSS) section of our program.
+	// This ensures that all static/global variables start out zero.
+	memset(edata, 0, end - edata);
+
+	// Initialize the console.
+	// Can't call cprintf until after we do this!
+	cons_init();
+
+	cprintf("6828 decimal is %o octal!\n", 6828);
+
+	// Lab 2 memory management initialization functions
+	mem_init();
+
+	// Drop into the kernel monitor.
+	while (1)
+		monitor(NULL);
+}
+```
+
+接着：
+
+```c
+// Set up a two-level page table:
+//    kern_pgdir is its linear (virtual) address of the root
+//
+// This function only sets up the kernel part of the address space
+// (ie. addresses >= UTOP).  The user part of the address space
+// will be set up later.
+//
+// From UTOP to ULIM, the user is allowed to read but not write.
+// Above ULIM the user cannot read or write.
+void
+mem_init(void)
+{
+	uint32_t cr0;
+	size_t n;
+
+	// Find out how much memory the machine has (npages & npages_basemem).
+	i386_detect_memory();
+
+	// Remove this line when you're ready to test this function.
+	panic("mem_init: This function is not finished\n");
+
+	//////////////////////////////////////////////////////////////////////
+	// create initial page directory.
+	kern_pgdir = (pde_t *) boot_alloc(PGSIZE);
+	memset(kern_pgdir, 0, PGSIZE);
+
+	//////////////////////////////////////////////////////////////////////
+	// Recursively insert PD in itself as a page table, to form
+	// a virtual page table at virtual address UVPT.
+	// (For now, you don't have understand the greater purpose of the
+	// following line.)
+
+	// Permissions: kernel R, user R
+	kern_pgdir[PDX(UVPT)] = PADDR(kern_pgdir) | PTE_U | PTE_P;
+
+	//////////////////////////////////////////////////////////////////////
+	// Allocate an array of npages 'struct PageInfo's and store it in 'pages'.
+	// The kernel uses this array to keep track of physical pages: for
+	// each physical page, there is a corresponding struct PageInfo in this
+	// array.  'npages' is the number of physical pages in memory.  Use memset
+	// to initialize all fields of each struct PageInfo to 0.
+	// Your code goes here:
+
+
+	//////////////////////////////////////////////////////////////////////
+	// Now that we've allocated the initial kernel data structures, we set
+	// up the list of free physical pages. Once we've done so, all further
+	// memory management will go through the page_* functions. In
+	// particular, we can now map memory using boot_map_region
+	// or page_insert
+	page_init();
+
+	check_page_free_list(1);
+	check_page_alloc();
+	check_page();
+
+	//////////////////////////////////////////////////////////////////////
+	// Now we set up virtual memory
+
+	//////////////////////////////////////////////////////////////////////
+	// Map 'pages' read-only by the user at linear address UPAGES
+	// Permissions:
+	//    - the new image at UPAGES -- kernel R, user R
+	//      (ie. perm = PTE_U | PTE_P)
+	//    - pages itself -- kernel RW, user NONE
+	// Your code goes here:
+
+	//////////////////////////////////////////////////////////////////////
+	// Use the physical memory that 'bootstack' refers to as the kernel
+	// stack.  The kernel stack grows down from virtual address KSTACKTOP.
+	// We consider the entire range from [KSTACKTOP-PTSIZE, KSTACKTOP)
+	// to be the kernel stack, but break this into two pieces:
+	//     * [KSTACKTOP-KSTKSIZE, KSTACKTOP) -- backed by physical memory
+	//     * [KSTACKTOP-PTSIZE, KSTACKTOP-KSTKSIZE) -- not backed; so if
+	//       the kernel overflows its stack, it will fault rather than
+	//       overwrite memory.  Known as a "guard page".
+	//     Permissions: kernel RW, user NONE
+	// Your code goes here:
+
+	//////////////////////////////////////////////////////////////////////
+	// Map all of physical memory at KERNBASE.
+	// Ie.  the VA range [KERNBASE, 2^32) should map to
+	//      the PA range [0, 2^32 - KERNBASE)
+	// We might not have 2^32 - KERNBASE bytes of physical memory, but
+	// we just set up the mapping anyway.
+	// Permissions: kernel RW, user NONE
+	// Your code goes here:
+
+	// Check that the initial page directory has been set up correctly.
+	check_kern_pgdir();
+
+	// Switch from the minimal entry page directory to the full kern_pgdir
+	// page table we just created.	Our instruction pointer should be
+	// somewhere between KERNBASE and KERNBASE+4MB right now, which is
+	// mapped the same way by both page tables.
+	//
+	// If the machine reboots at this point, you've probably set up your
+	// kern_pgdir wrong.
+	lcr3(PADDR(kern_pgdir));
+
+	check_page_free_list(0);
+
+	// entry.S set the really important flags in cr0 (including enabling
+	// paging).  Here we configure the rest of the flags that we care about.
+	cr0 = rcr0();
+	cr0 |= CR0_PE|CR0_PG|CR0_AM|CR0_WP|CR0_NE|CR0_MP;
+	cr0 &= ~(CR0_TS|CR0_EM);
+	lcr0(cr0);
+
+	// Some more checks, only possible after kern_pgdir is installed.
+	check_page_installed_pgdir();
+}
+```
+
 TODO
