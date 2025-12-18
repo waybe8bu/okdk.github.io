@@ -648,7 +648,63 @@ Software             |              |--------&gt;|           |----------&gt;  RA
 </span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
 </span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">uint16_t</span> pp_ref;
 </span></span><span style="display:flex;"><span>};
-</span></span></code></pre></div><p>TODO</p>
+</span></span></code></pre></div><p><code>boot_alloc()</code> 只是临时的物理内存分配方法，乍一看难以理解，主要是 <code>end</code> 是链接器脚本定义的：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span>SECTIONS
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">/* Link the kernel at this address: &#34;.&#34; means the current address */</span>
+</span></span><span style="display:flex;"><span>	. <span style="color:#f92672">=</span> <span style="color:#ae81ff">0xF0100000</span>;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">/* AT(...) gives the load address of this section, which tells
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">	   the boot loader where to load the kernel in physical memory */</span>
+</span></span><span style="display:flex;"><span>	.text : <span style="color:#a6e22e">AT</span>(<span style="color:#ae81ff">0x100000</span>) {
+</span></span><span style="display:flex;"><span>		<span style="color:#f92672">*</span>(.text .stub .text.<span style="color:#f92672">*</span> .gnu.linkonce.t.<span style="color:#f92672">*</span>)
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">PROVIDE</span>(etext <span style="color:#f92672">=</span> .);	<span style="color:#75715e">/* Define the &#39;etext&#39; symbol to this value */</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	.rodata : {
+</span></span><span style="display:flex;"><span>		<span style="color:#f92672">*</span>(.rodata .rodata.<span style="color:#f92672">*</span> .gnu.linkonce.r.<span style="color:#f92672">*</span>)
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">/* Include debugging information in kernel memory */</span>
+</span></span><span style="display:flex;"><span>	.stab : {
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">PROVIDE</span>(__STAB_BEGIN__ <span style="color:#f92672">=</span> .);
+</span></span><span style="display:flex;"><span>		<span style="color:#f92672">*</span>(.stab);
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">PROVIDE</span>(__STAB_END__ <span style="color:#f92672">=</span> .);
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">BYTE</span>(<span style="color:#ae81ff">0</span>)		<span style="color:#75715e">/* Force the linker to allocate space
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">				   for this section */</span>
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	.stabstr : {
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">PROVIDE</span>(__STABSTR_BEGIN__ <span style="color:#f92672">=</span> .);
+</span></span><span style="display:flex;"><span>		<span style="color:#f92672">*</span>(.stabstr);
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">PROVIDE</span>(__STABSTR_END__ <span style="color:#f92672">=</span> .);
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">BYTE</span>(<span style="color:#ae81ff">0</span>)		<span style="color:#75715e">/* Force the linker to allocate space
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">				   for this section */</span>
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">/* Adjust the address for the data segment to the next page */</span>
+</span></span><span style="display:flex;"><span>	. <span style="color:#f92672">=</span> <span style="color:#a6e22e">ALIGN</span>(<span style="color:#ae81ff">0x1000</span>);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">/* The data segment */</span>
+</span></span><span style="display:flex;"><span>	.data : {
+</span></span><span style="display:flex;"><span>		<span style="color:#f92672">*</span>(.data)
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	.bss : {
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">PROVIDE</span>(edata <span style="color:#f92672">=</span> .);
+</span></span><span style="display:flex;"><span>		<span style="color:#f92672">*</span>(.bss)
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">PROVIDE</span>(end <span style="color:#f92672">=</span> .);
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">BYTE</span>(<span style="color:#ae81ff">0</span>)
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#f92672">/</span>DISCARD<span style="color:#f92672">/</span> <span style="color:#f92672">:</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#f92672">*</span>(.eh_frame .note.GNU<span style="color:#f92672">-</span>stack)
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>也就是紧挨着内核 BSS 段的后面，可以理解为内核代码的后面，需要注意的是方法返回的是 VA。</p>
+<p>TODO</p>
 
 </main>
 

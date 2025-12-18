@@ -693,4 +693,65 @@ struct PageInfo {
 };
 ```
 
+`boot_alloc()` 只是临时的物理内存分配方法，乍一看难以理解，主要是 `end` 是链接器脚本定义的：
+
+```c
+SECTIONS
+{
+	/* Link the kernel at this address: "." means the current address */
+	. = 0xF0100000;
+
+	/* AT(...) gives the load address of this section, which tells
+	   the boot loader where to load the kernel in physical memory */
+	.text : AT(0x100000) {
+		*(.text .stub .text.* .gnu.linkonce.t.*)
+	}
+
+	PROVIDE(etext = .);	/* Define the 'etext' symbol to this value */
+
+	.rodata : {
+		*(.rodata .rodata.* .gnu.linkonce.r.*)
+	}
+
+	/* Include debugging information in kernel memory */
+	.stab : {
+		PROVIDE(__STAB_BEGIN__ = .);
+		*(.stab);
+		PROVIDE(__STAB_END__ = .);
+		BYTE(0)		/* Force the linker to allocate space
+				   for this section */
+	}
+
+	.stabstr : {
+		PROVIDE(__STABSTR_BEGIN__ = .);
+		*(.stabstr);
+		PROVIDE(__STABSTR_END__ = .);
+		BYTE(0)		/* Force the linker to allocate space
+				   for this section */
+	}
+
+	/* Adjust the address for the data segment to the next page */
+	. = ALIGN(0x1000);
+
+	/* The data segment */
+	.data : {
+		*(.data)
+	}
+
+	.bss : {
+		PROVIDE(edata = .);
+		*(.bss)
+		PROVIDE(end = .);
+		BYTE(0)
+	}
+
+
+	/DISCARD/ : {
+		*(.eh_frame .note.GNU-stack)
+	}
+}
+```
+
+也就是紧挨着内核 BSS 段的后面，可以理解为内核代码的后面，需要注意的是方法返回的是 VA。
+
 TODO
